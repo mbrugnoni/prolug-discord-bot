@@ -17,14 +17,10 @@ discordKey = config['DEFAULT']['discordKey']
 ### Trying this out ###
 intents = discord.Intents.default()
 intents.members = True
-#bot = commands.Bot(command_prefix='!', intents=intents)
 client = commands.Bot(command_prefix='!', intents=intents)
 
-
-
 @client.event
-async def on_member_join(member):
-    # Replace 'your_channel_id' with the actual channel ID where you want to send the welcome message
+async def on_member_join(member):    
     channel = client.get_channel(611027490848374822)
     welcome_message = f"Welcome {member.mention}! Feel free to look around and ask questions!"
     await channel.send(welcome_message)
@@ -143,8 +139,7 @@ async def on_message(message):
             rank=1
             leaderboard=''
             await message.channel.send('Current ProLUG Codewars Leaderboard:')
-            for member in parsed["data"]:
-                # await message.channel.send(f'{rank}. {member["username"]}')
+            for member in parsed["data"]:                
                 leaderboard+=(f'{rank}. {member["username"]} - {member["honor"]}\n')
                 rank+=1
             await message.channel.send(leaderboard)
