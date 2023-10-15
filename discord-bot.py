@@ -1,11 +1,12 @@
 import discord
+from discord.ext import tasks, commands
 import os
 import random
 import boto3
 import requests
 import json
 from datetime import datetime
-from discord.ext import commands
+from datetime import timedelta
 from time import sleep
 from collections import defaultdict
 import configparser
@@ -51,6 +52,51 @@ async def on_message(message):
             return
         elif user_message.lower() == "bye":
             await message.channel.send(f'Get out of here {username}')
+        elif user_message.lower() == "!schedule":
+            # guild_id = client.get_guild(611027490848374811)
+            guild_id = '611027490848374811'
+            url = f"https://discord.com/api/v10/guilds/{guild_id}/scheduled-events"
+            data = {
+                "name": "ProLUG Weekly Meeting - TEST",
+                "description": "Meeting to hang out, talk shop, work on projects.",                
+                "scheduled_start_time" : "2023-10-28T22:00:00Z",
+                "entity_type": 2,
+                "entity_metadata": None,
+                "channel_id" : "671106405796806675",
+                # "scheduled_start_time": (datetime.now() + timedelta(hours=1)).isoformat(),
+                "privacy_level": 2
+            }
+            print(data)
+
+            headers = {"Authorization": f"Bot {discordKey}","Content-Type": "application/json"}
+            r = requests.post(url, headers=headers, json=data)
+
+            response = r.json()
+            print(response)
+
+
+        #     client.fetch_guild(611027490848374811)
+        #     # guild = '611027490848374811'
+        #     # channel = guild.get_channel(746588442603028546)
+        #     event_name = "ProLUG Weekly Meeting"
+        #     event_description = "Meeting to hang out, talk shop, work on projects."
+        #     event_start_time = datetime(2023, 10, 15, 18, 0)
+        #     event_privacy = 'GUILD_ONLY'
+
+
+        #     # event = {
+        #     #     "name": event_name,
+        #     #     "description": event_description, 
+        #     #     "scheduled_start_time": event_start_time
+        #     # }            
+        #     event = client.guilds[guild].create_scheduled_event(
+        #     name=event_name,
+        #     start_time=event_start_time,            
+        #     description=event_description,
+        #     privacy=event_privacy,
+        #     )
+        #     # await channel.create_guild_event(event)            
+        #     await message.channel.send(f"Scheduled new event: {event_name}")
         elif user_message.lower() == "rise my minion!" and username.lower() == "fishermanguybro":
             await message.channel.send(f'FishermanGuyBot is coming online... *BEEP* *BOOP* *BEEP*')
             sleep(3)
