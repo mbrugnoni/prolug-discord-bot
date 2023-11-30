@@ -45,15 +45,14 @@ async def on_message(message):
     # If a message is sent in the channel Polls then the bot will respond in the General channel with a message
     if channel == "polls" and message.author.name.lower() != "fishermanguybot":
         await message.channel.send(f'@here- A new poll was created by {username} - cast your vote!')
-        return
-        
+                
     if channel != "labs":
         if user_message.lower() == "fishermanguybot" or user_message.lower() == "hi":
             await message.channel.send(f'Hello {username}')
-            return
+            
         elif user_message.lower() == "bye":
             await message.channel.send(f'Get out of here {username}')
-        elif user_message.lower() == "!schedule":
+        elif user_message.lower() == "!schedule" and (username.lower() == "fishermanguybro" or username.lower() == "het_tanis"):
             # guild_id = client.get_guild(611027490848374811)
             guild_id = '611027490848374811'
             url = f"https://discord.com/api/v10/guilds/{guild_id}/scheduled-events"
@@ -71,7 +70,7 @@ async def on_message(message):
             # Format as ISO8601 string
             scheduled_start_time = next_saturday.isoformat()
             data = {
-                "name": "ProLUG Weekly Meeting - TEST",
+                "name": "ProLUG Weekly Meeting",
                 "description": "Meeting to hang out, talk shop, work on projects.",                
                 "scheduled_start_time" : scheduled_start_time,
                 "entity_type": 2,
@@ -144,8 +143,10 @@ async def on_message(message):
                 await message.channel.send(f'{username} flipped a coin and got tails')    
         elif user_message.lower() == "!labs":
             await message.channel.send(f'Check out the latest labs -> https://killercoda.com/het-tanis')
+        elif user_message.lower() == "!book":
+            await message.channel.send(f"Check out Scoot Tanis's new Book of Labs here! -> https://leanpub.com/theprolugbigbookoflabs")
         elif user_message.lower() == "!commands":
-            await message.channel.send(f'I currently support: !labs, !codewars, !8ball, !roll, !coinflip, !server_age, !user_count, !commands, !joke, and some other nonsense.')
+            await message.channel.send(f'I currently support: !labs, !book, !codewars, !8ball, !roll, !coinflip, !server_age, !user_count, !commands, !joke, and some other nonsense.')
         elif user_message.lower() == "!joke":
             jokes = [" What's on Chris Rock's Face? \nFresh Prints!",
                      "My wife just completed a 40-week bodybuilding program this morning.\nIt's a girl and weighs 7lbs 12 oz.",
