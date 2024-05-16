@@ -27,7 +27,7 @@ client = commands.Bot(command_prefix='!', intents=intents)
 async def on_member_join(member):    
     channel = client.get_channel(611027490848374822)
         
-    fullq = f"Talk like someone who loves using linux and make your response short. Dont state who you are. Give {member.mention} a welcome to the ProLUG discord and encourage them to ask questions and do more linux! Let them know we are here to help. Limit the response to two sentences."
+    fullq = f"Talk like a grumpy unix administrator and make your response short. Dont state who you are. Give {member.mention} a welcome to the ProLUG discord and encourage them to ask questions and do more linux! Let them know we are here to help. Limit the response to two sentences."
     data = {
             "model": "mistral",
             "prompt": fullq,
