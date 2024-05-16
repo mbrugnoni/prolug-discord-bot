@@ -3,18 +3,20 @@ from discord.ext import tasks, commands
 import os
 import random
 import boto3
-import requests
 import json
+import requests
 from datetime import datetime
 from datetime import timedelta
 from datetime import timezone
 from time import sleep
 from collections import defaultdict
 import configparser
+import time
 
 config = configparser.ConfigParser()
 config.read('.env')
 discordKey = config['DEFAULT']['discordKey']
+session_aod = config['DEFAULT']['session']
 
 ### Trying this out ###
 intents = discord.Intents.default()
@@ -24,8 +26,16 @@ client = commands.Bot(command_prefix='!', intents=intents)
 @client.event
 async def on_member_join(member):    
     channel = client.get_channel(611027490848374822)
-    welcome_message = f"Welcome {member.mention}! Feel free to look around and ask questions!"
-    await channel.send(welcome_message)
+        
+    fullq = f"Talk like someone who loves using linux and make your response short. Dont state who you are. Give {member.mention} a welcome to the ProLUG discord and encourage them to ask questions and do more linux! Let them know we are here to help. Limit the response to two sentences."
+    data = {
+            "model": "mistral",
+            "prompt": fullq,
+            "stream": False
+    }
+    response = requests.post('http://localhost:11434/api/generate', json=data)
+    response_data = response.json()
+    await channel.send(response_data['response'])
 
 @client.event
 async def on_ready():
@@ -52,6 +62,36 @@ async def on_message(message):
             
         elif user_message.lower() == "bye":
             await message.channel.send(f'Get out of here {username}')
+
+        elif "!ask" in user_message.lower():
+            promptq = user_message.lower().split("!ask ")[1]
+            roleq = "Talk like an angry unix administrator and make your response short. Dont state who you are."
+            fullq = roleq + promptq
+            data = {
+                "model": "mistral",
+                "prompt": fullq,
+                "stream": False
+            }
+            response = requests.post('http://localhost:11434/api/generate', json=data)
+            response_data = response.json()
+            # print(response_data['response'])
+            await message.channel.send(response_data['response'])
+
+        elif user_message.lower() == "!aoc":
+            # url = "https://adventofcode.com/2023/leaderboard/private/view/3280172.json"
+            
+            # response = requests.get(url, cookies={"session": session_aod})
+            # data = response.json()
+
+            data = requests.get("https://adventofcode.com/2023/leaderboard/private/view/3280172.json", cookies={"session": session_aod}).json()
+
+            ranked = sorted(data['members'].values(), key=lambda u: u['local_score'], reverse=True)
+
+            board = [f"{idx+1}) {u['name']} - {u['local_score']}" for (idx, u) in enumerate(ranked)]
+            board_str = "\n".join(board)
+
+            await message.channel.send(board_str) 
+
         elif user_message.lower() == "!schedule" and (username.lower() == "fishermanguybro" or username.lower() == "het_tanis"):
             # guild_id = client.get_guild(611027490848374811)
             guild_id = '611027490848374811'
@@ -142,7 +182,7 @@ async def on_message(message):
             else:
                 await message.channel.send(f'{username} flipped a coin and got tails')    
         elif user_message.lower() == "!labs":
-            await message.channel.send(f'Check out the latest labs -> https://killercoda.com/het-tanis')
+            await message.channel.send(f'Check out the latest labs -> https://killercoda.com/het-tanis\n ---------------------------> https://killercoda.com/fishermanguybro')
         elif user_message.lower() == "!book":
             await message.channel.send(f"Check out Scoot Tanis's new Book of Labs here! -> https://leanpub.com/theprolugbigbookoflabs")
         elif user_message.lower() == "!commands":
