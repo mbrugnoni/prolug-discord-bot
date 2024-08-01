@@ -48,6 +48,21 @@ async def on_member_join(member):
     if int(member.guild.member_count) % 500 == 0:
         await channel.send(f'Congratulations {member.mention}! You are member number {member.guild.member_count}!')
 
+### Joke function ###
+def get_joke():
+    url = "https://icanhazdadjoke.com/"
+    headers = {
+        "Accept": "application/json"
+    }
+    
+    response = requests.get(url, headers=headers)
+    
+    if response.status_code == 200:
+        joke_data = response.json()
+        return joke_data['joke']
+    else:
+        return f"Error: Failed to fetch joke. Status code: {response.status_code}"
+
 ### 8ball Function ###
 def get_eight_ball_response(question):
     base_url = "https://eightballapi.com/api"
@@ -160,24 +175,8 @@ async def on_message(message):
             await message.channel.send(f'I currently support: !labs, !book, !codewars, !8ball, !roll, !coinflip, !server_age, !user_count, !commands, !joke, and some other nonsense.')
         
         ### Update this to joke API ###
-        elif user_message.lower() == "!joke":
-            jokes = [" What's on Chris Rock's Face? \nFresh Prints!",
-                     "My wife just completed a 40-week bodybuilding program this morning.\nIt's a girl and weighs 7lbs 12 oz.",
-                     "Of all the inventions of the last 100 years, the dry erase board has to be the most remarkable.",
-                     "Why was 2019 afraid of 2020?\nBecause they had a fight and 2021.",
-                     "Did you hear the one about the dog and the tree?\nThey had a long conversation about bark.",
-                      "My son was just born and another dad at the nursery congratulated me and said his daughter was born yesterday. He said maybe they'll marry each other.\nSure, like my son is going to marry someone twice his age.",
-                      "My landlord texted saying we need to meet up and talk about how high my heating bill is.\nI said, sure! My door is always open!",
-                      "It's a 5-minute walk from my house to the bar, but a 45-minute walk from the bar to my house.\nThe difference is staggering.",
-                      "To whomever stole my Microsoft Office, I will find you, you have my Word...",
-                      "What has five toes but isn’t your foot?\nMy foot.",
-                      "Did I ever tell you about the time I was addicted to the hokey pokey? I was, but then I turned myself around.",
-                      "What do you call a fly without wings?\nA walk!",
-                      "What do sprinters eat before a race?\nNothing. They fast.",
-                      "Which knight invented King Arthur's Round Table?\nSir Cumference.",
-                      "What do you call a belt made of watches?\nA waist of time!",
-                      "I caught my son chewing on electrical cords, so I had to ground him.\nHe’s doing better currently, and now conducting himself properly."]
-            await message.channel.send(random.choice(jokes))
+        elif user_message.lower() == "!joke":            
+            await message.channel.send(get_joke())
         
         # elif user_message.lower() == "!codewars":
         #     url = 'https://www.codewars.com/api/v1/clans/ProLUG/members'
