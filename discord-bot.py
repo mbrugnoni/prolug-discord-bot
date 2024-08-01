@@ -44,6 +44,22 @@ async def on_member_join(member):
 
     await channel.send(response_data['response'])
 
+    # Check if user_count is divisible by 500 and congratulate them
+    if int(member.guild.member_count) % 500 == 0:
+        await channel.send(f'Congratulations {member.mention}! You are member number {member.guild.member_count}!')
+
+### 8ball Function ###
+def get_eight_ball_response(question):
+    base_url = "https://eightballapi.com/api"
+    params = {"question": question}
+    
+    response = requests.get(base_url, params=params)
+    
+    if response.status_code == 200:
+        return response.json()
+    else:
+        return f"Error: {response.status_code}"
+
 ### When the bot is ready, print this in the console ###
 @client.event
 async def on_ready():
@@ -54,16 +70,16 @@ async def on_message(message):
     username = str(message.author).split("#")[0]
     channel = str(message.channel.name)
     user_message = str(message.content)
-
-    # Getting the current date and time
+    
     dt = datetime.now()
-  
+
     print(f'Message {user_message} by {username} on {channel}')
 
     # If a message is sent in the channel Polls then the bot will respond in the General channel with a message
     if channel == "polls" and message.author.name.lower() != "fishermanguybot":
         await message.channel.send(f'@here- A new poll was created by {username} - cast your vote!')
-                
+
+    ### Dumb little hi message ###            
     if channel != "labs":
         if user_message.lower() == "fishermanguybot" or user_message.lower() == "hi":
             await message.channel.send(f'Hello {username}')
@@ -71,6 +87,7 @@ async def on_message(message):
         elif user_message.lower() == "bye":
             await message.channel.send(f'Get out of here {username}')
 
+        ### Bot responds to questions asked ###
         elif "!ask" in user_message.lower():
             promptq = user_message.lower().split("!ask ")[1]
             roleq = "Talk like an angry unix administrator and make your response short. Dont state who you are."
@@ -84,44 +101,32 @@ async def on_message(message):
             response_data = response.json()            
             await message.channel.send(response_data['response'])
 
+        ### Stupid message for myself ###
         elif user_message.lower() == "rise my minion!" and username.lower() == "fishermanguybro":
             await message.channel.send(f'FishermanGuyBot is coming online... *BEEP* *BOOP* *BEEP*')
             sleep(3)
             await message.channel.send(f'I am here my master, ready to do your bidding.')
+        
+        ### Original reason bot was created ###
         elif "scott" in user_message.lower():
             await message.channel.send(f'Its actually pronounced Scoot')
+        
+        ### Get user count of server ###
         elif message.content == '!user_count':
-        #    guild = message.guild
-        #    member_count = guild.member_count
-        #    await message.channel.send(f'Total number of users in the server: {member_count}')
-           await message.channel.send(f'Total number of users in the server: {message.guild.member_count}')
+            await message.channel.send(f'Total number of users in the server: {message.guild.member_count}')
+        
+        ### Roll dice message ###
         elif user_message.lower() == "!roll":
             roll = random.randint(1, 12)
             await message.channel.send(f'{username} rolled a {roll}')
+        
+        ### 8ball message ###
         elif user_message.startswith('!8ball'):
-            responses = [
-                'It is certain.', 
-                'It is decidedly so.',
-                'Without a doubt.',
-                'Yes definitely.',
-                'You may rely on it.',
-                'As I see it, yes.',
-                'Most likely.',
-                'Outlook good.',
-                'Yes.',
-                'Signs point to yes.',
-                'Reply hazy, try again.',
-                'Ask again later.',
-                'Better not tell you now.',
-                'Cannot predict now.',
-                'Concentrate and ask again.',
-                "Don't count on it.",
-                'My reply is no.',
-                'My sources say no.',
-                'Outlook not so good.',
-                'Very doubtful.'
-            ]
-            await message.channel.send(random.choice(responses))
+            user_question = "whatever"
+            result = get_eight_ball_response(user_question)
+            await message.channel.send(result['reading'])
+                        
+        ### Age of Discord server ###
         elif message.content.lower() == '!server_age':
             server = message.guild
             if server:
@@ -133,18 +138,28 @@ async def on_message(message):
                 await message.channel.send(f'This server is {years} years and {remaining_days} days old.')
             else:
                 await message.channel.send('Error: Could not retrieve server information.')
+        
+        ### Flip a coin and send heads or tails ###
         elif user_message.lower() == "!coinflip":
             coinflip = random.randint(0, 1)
             if coinflip == 0:
                 await message.channel.send(f'{username} flipped a coin and got heads')
             else:
                 await message.channel.send(f'{username} flipped a coin and got tails')    
+        
+        ### Killercoda labs links ###
         elif user_message.lower() == "!labs":
             await message.channel.send(f'Check out the latest labs -> https://killercoda.com/het-tanis\n ---------------------------> https://killercoda.com/fishermanguybro')
+        
+        ### Book of labs link ###
         elif user_message.lower() == "!book":
             await message.channel.send(f"Check out Scoot Tanis's new Book of Labs here! -> https://leanpub.com/theprolugbigbookoflabs")
+        
+        ### Tell users the commands available ###
         elif user_message.lower() == "!commands":
             await message.channel.send(f'I currently support: !labs, !book, !codewars, !8ball, !roll, !coinflip, !server_age, !user_count, !commands, !joke, and some other nonsense.')
+        
+        ### Update this to joke API ###
         elif user_message.lower() == "!joke":
             jokes = [" What's on Chris Rock's Face? \nFresh Prints!",
                      "My wife just completed a 40-week bodybuilding program this morning.\nIt's a girl and weighs 7lbs 12 oz.",
@@ -163,21 +178,22 @@ async def on_message(message):
                       "What do you call a belt made of watches?\nA waist of time!",
                       "I caught my son chewing on electrical cords, so I had to ground him.\nHe’s doing better currently, and now conducting himself properly."]
             await message.channel.send(random.choice(jokes))
-        elif user_message.lower() == "!codewars":
-            url = 'https://www.codewars.com/api/v1/clans/ProLUG/members'
+        
+        # elif user_message.lower() == "!codewars":
+        #     url = 'https://www.codewars.com/api/v1/clans/ProLUG/members'
 
-            response = requests.get(url)
-            data = response.json()
-            json_data = json.dumps(data)
-            parsed = json.loads(json_data)
+        #     response = requests.get(url)
+        #     data = response.json()
+        #     json_data = json.dumps(data)
+        #     parsed = json.loads(json_data)
 
-            rank=1
-            leaderboard=''
-            await message.channel.send('Current ProLUG Codewars Leaderboard:')
-            for member in parsed["data"]:                
-                leaderboard+=(f'{rank}. {member["username"]} - {member["honor"]}\n')
-                rank+=1
-            await message.channel.send(leaderboard)
-            await message.channel.send(':trophy::trophy::trophy: If you beat FishermanGuyBro, Sending_Grounds or KingBunz by Oct31, you win a Humble Bundle :trophy::trophy::trophy:')
+        #     rank=1
+        #     leaderboard=''
+        #     await message.channel.send('Current ProLUG Codewars Leaderboard:')
+        #     for member in parsed["data"]:                
+        #         leaderboard+=(f'{rank}. {member["username"]} - {member["honor"]}\n')
+        #         rank+=1
+        #     await message.channel.send(leaderboard)
+        #     await message.channel.send(':trophy::trophy::trophy: If you beat FishermanGuyBro, Sending_Grounds or KingBunz by Oct31, you win a Humble Bundle :trophy::trophy::trophy:')
 
 client.run(f'{discordKey}')
