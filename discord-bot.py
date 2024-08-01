@@ -13,21 +13,23 @@ from collections import defaultdict
 import configparser
 import time
 
+### Getting the discord key from the .env file ###
 config = configparser.ConfigParser()
 config.read('.env')
 discordKey = config['DEFAULT']['discordKey']
 session_aod = config['DEFAULT']['session']
 
-### Trying this out ###
+### Need this for welcome message??? Maybe ###
 intents = discord.Intents.default()
 intents.members = True
 client = commands.Bot(command_prefix='!', intents=intents)
 
+### Welcome new members when they join ###
 @client.event
 async def on_member_join(member):    
     channel = client.get_channel(611027490848374822)
         
-    fullq = f"Talk like a grumpy unix administrator and make your response short. Dont state who you are. Give {member.mention} a welcome to the ProLUG discord and encourage them to ask questions and do more linux! Let them know we are here to help. Limit the response to two sentences."
+    fullq = f"Talk like an angry unix administrator and make your response short. Dont state who you are. Dont say that your angry or say the word angrily. Welcome {member.mention} to the ProLUG discord and encourage them to ask questions about linux. Make sure to state their name in the welcome message. Limit the response to two sentences."
     data = {
             "model": "mistral",
             "prompt": fullq,
@@ -35,8 +37,14 @@ async def on_member_join(member):
     }
     response = requests.post('http://localhost:11434/api/generate', json=data)
     response_data = response.json()
+    if response_data['response'].startswith('Angrily:'):
+        response_data['response'] = response_data['response'][8:]
+    if response_data['response'].startswith('"'):
+        response_data['response'] = response_data['response'][1:-1]
+
     await channel.send(response_data['response'])
 
+### When the bot is ready, print this in the console ###
 @client.event
 async def on_ready():
     print("Logged in as a bot {0.user}".format(client))
@@ -73,58 +81,8 @@ async def on_message(message):
                 "stream": False
             }
             response = requests.post('http://localhost:11434/api/generate', json=data)
-            response_data = response.json()
-            # print(response_data['response'])
+            response_data = response.json()            
             await message.channel.send(response_data['response'])
-
-        elif user_message.lower() == "!aoc":
-            # url = "https://adventofcode.com/2023/leaderboard/private/view/3280172.json"
-            
-            # response = requests.get(url, cookies={"session": session_aod})
-            # data = response.json()
-
-            data = requests.get("https://adventofcode.com/2023/leaderboard/private/view/3280172.json", cookies={"session": session_aod}).json()
-
-            ranked = sorted(data['members'].values(), key=lambda u: u['local_score'], reverse=True)
-
-            board = [f"{idx+1}) {u['name']} - {u['local_score']}" for (idx, u) in enumerate(ranked)]
-            board_str = "\n".join(board)
-
-            await message.channel.send(board_str) 
-
-        elif user_message.lower() == "!schedule" and (username.lower() == "fishermanguybro" or username.lower() == "het_tanis"):
-            # guild_id = client.get_guild(611027490848374811)
-            guild_id = '611027490848374811'
-            url = f"https://discord.com/api/v10/guilds/{guild_id}/scheduled-events"
-            next_saturday = datetime.today()
-            while next_saturday.weekday() != 5:
-                next_saturday += timedelta(days=1)
-
-            # Set to 6 PM time    
-            next_saturday = next_saturday.replace(hour=18, minute=0, second=0) 
-
-            # Convert to UTC   
-            eastern = timezone(timedelta(hours=-5))
-            next_saturday = next_saturday.astimezone(eastern)
-
-            # Format as ISO8601 string
-            scheduled_start_time = next_saturday.isoformat()
-            data = {
-                "name": "ProLUG Weekly Meeting",
-                "description": "Meeting to hang out, talk shop, work on projects.",                
-                "scheduled_start_time" : scheduled_start_time,
-                "entity_type": 2,
-                "entity_metadata": None,
-                "channel_id" : "671106405796806675",
-                "privacy_level": 2
-            }
-            print(data)
-
-            headers = {"Authorization": f"Bot {discordKey}","Content-Type": "application/json"}
-            r = requests.post(url, headers=headers, json=data)
-
-            response = r.json()
-            print(response)
 
         elif user_message.lower() == "rise my minion!" and username.lower() == "fishermanguybro":
             await message.channel.send(f'FishermanGuyBot is coming online... *BEEP* *BOOP* *BEEP*')
