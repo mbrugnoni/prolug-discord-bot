@@ -18,6 +18,7 @@ config = configparser.ConfigParser()
 config.read('.env')
 discordKey = config['DEFAULT']['discordKey']
 session_aod = config['DEFAULT']['session']
+GROQ_API_KEY = config['DEFAULT']['GROQ_API_KEY']
 
 # Set API key and endpoint URL
 # GROQ_API_KEY = "your_api_key_here"
