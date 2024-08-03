@@ -145,7 +145,7 @@ async def on_message(message):
             response_json = response.json()
 
             # Extract the assistant's response from the JSON object
-            for chunk in completion:
+            for chunk in data:
                 completion_text += (chunk.choices[0].delta.content or "")
                 # print(chunk.choices[0].delta.content or "", end="")
             # assistant_response = response_json["choices"][0]["delta"]["content"]
