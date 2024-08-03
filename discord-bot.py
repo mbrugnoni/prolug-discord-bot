@@ -39,7 +39,7 @@ async def on_member_join(member):
             "prompt": fullq,
             "stream": False
     }
-    response = requests.post("http://{llm_host}:11434/api/generate", json=data)
+    response = requests.post(f"http://{llm_host}:11434/api/generate", json=data)
     response_data = response.json()
     if response_data['response'].startswith('Angrily:'):
         response_data['response'] = response_data['response'][8:]
@@ -116,7 +116,7 @@ async def on_message(message):
                 "prompt": fullq,
                 "stream": False
             }
-            response = requests.post("http://{llm_host}:11434/api/generate", json=data)
+            response = requests.post(f"http://{llm_host}:11434/api/generate", json=data)
             response_data = response.json()            
             await message.channel.send(response_data['response'])
 
