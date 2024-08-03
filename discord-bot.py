@@ -18,7 +18,7 @@ config = configparser.ConfigParser()
 config.read('.env')
 discordKey = config['DEFAULT']['discordKey']
 session_aod = config['DEFAULT']['session']
-GROQ_API_KEY = config['DEFAULT']['GROQ_API_KEY']
+groq_key = config['DEFAULT']['GROQ_API_KEY']
 
 # Set API key and endpoint URL
 # GROQ_API_KEY = "your_api_key_here"
@@ -27,7 +27,7 @@ llm_host = '192.168.50.133' ### Update to wherever Ollama is running
 # Set request headers
 headers = {
     "Content-Type": "application/json",
-    "Authorization": f"Bearer {GROQ_API_KEY}"
+    "Authorization": f"Bearer {groq_key}"
 }
 
 
