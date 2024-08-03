@@ -19,6 +19,9 @@ config.read('.env')
 discordKey = config['DEFAULT']['discordKey']
 session_aod = config['DEFAULT']['session']
 
+llm_host = '192.168.50.133' ### Update to wherever Ollama is running
+
+
 ### Need this for welcome message??? Maybe ###
 intents = discord.Intents.default()
 intents.members = True
@@ -112,7 +115,7 @@ async def on_message(message):
                 "prompt": fullq,
                 "stream": False
             }
-            response = requests.post('http://localhost:11434/api/generate', json=data)
+            response = requests.post("http://{llm_host}:11434/api/generate", json=data)
             response_data = response.json()            
             await message.channel.send(response_data['response'])
 
@@ -172,7 +175,7 @@ async def on_message(message):
         
         ### Tell users the commands available ###
         elif user_message.lower() == "!commands":
-            await message.channel.send(f'I currently support: !labs, !book, !codewars, !8ball, !roll, !coinflip, !server_age, !user_count, !commands, !joke, and some other nonsense.')
+            await message.channel.send(f'I currently support: !labs, !book, !8ball, !roll, !coinflip, !server_age, !user_count, !commands, !joke, and some other nonsense.')
         
         ### Update this to joke API ###
         elif user_message.lower() == "!joke":            
