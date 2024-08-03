@@ -25,6 +25,7 @@ llm_host = '192.168.50.133' ### Update to wherever Ollama is running
 ### Need this for welcome message??? Maybe ###
 intents = discord.Intents.default()
 intents.members = True
+intents.message_content = True
 client = commands.Bot(command_prefix='!', intents=intents)
 
 ### Welcome new members when they join ###
@@ -38,7 +39,7 @@ async def on_member_join(member):
             "prompt": fullq,
             "stream": False
     }
-    response = requests.post('http://localhost:11434/api/generate', json=data)
+    response = requests.post("http://{llm_host}:11434/api/generate", json=data)
     response_data = response.json()
     if response_data['response'].startswith('Angrily:'):
         response_data['response'] = response_data['response'][8:]
