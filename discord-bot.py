@@ -19,7 +19,17 @@ config.read('.env')
 discordKey = config['DEFAULT']['discordKey']
 session_aod = config['DEFAULT']['session']
 
+# Set API key and endpoint URL
+# GROQ_API_KEY = "your_api_key_here"
+url = "https://api.groq.com/openai/v1/chat/completions"
 llm_host = '192.168.50.133' ### Update to wherever Ollama is running
+# Set request headers
+headers = {
+    "Content-Type": "application/json",
+    "Authorization": f"Bearer {GROQ_API_KEY}"
+}
+
+
 
 
 ### Need this for welcome message??? Maybe ###
@@ -111,14 +121,40 @@ async def on_message(message):
             promptq = user_message.lower().split("!ask ")[1]
             roleq = "Talk like an angry unix administrator and make your response short. Dont state who you are."
             fullq = roleq + promptq
+            # Set request data
             data = {
-                "model": "mistral",
-                "prompt": fullq,
-                "stream": False
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": fullq
+                    }
+                ],
+                "model": "mixtral-8x7b-32768",
+                "temperature": 1,
+                "max_tokens": 1024,
+                "top_p": 1,
+                "stream": False,
+                "stop": None
             }
-            response = requests.post(f"http://{llm_host}:11434/api/generate", json=data)
-            response_data = response.json()            
-            await message.channel.send(response_data['response'])
+
+            # Make the HTTP request
+            response = requests.post(url, headers=headers, data=json.dumps(data))
+
+            # Get the response content as a JSON object
+            response_json = response.json()
+
+            # Extract the assistant's response from the JSON object
+            assistant_response = response_json["choices"][0]["delta"]["content"]
+            await message.channel.send(assistant_response)
+            
+            # data = {
+            #     "model": "mistral",
+            #     "prompt": fullq,
+            #     "stream": False
+            # }
+            # response = requests.post(f"http://{llm_host}:11434/api/generate", json=data)
+            # response_data = response.json()            
+            # await message.channel.send(response_data['response'])
 
         ### Stupid message for myself ###
         elif user_message.lower() == "rise my minion!" and username.lower() == "fishermanguybro":
