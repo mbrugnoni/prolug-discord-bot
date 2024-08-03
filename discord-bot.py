@@ -143,7 +143,8 @@ async def on_message(message):
 
             # Get the response content as a JSON object
             response_json = response.json()
-            print(response_json)
+            print(response_json['choices'][0]['message']['content'])
+            
 
             # Extract the assistant's response from the JSON object
             # for chunk in data:
