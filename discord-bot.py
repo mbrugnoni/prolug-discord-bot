@@ -145,8 +145,11 @@ async def on_message(message):
             response_json = response.json()
 
             # Extract the assistant's response from the JSON object
-            assistant_response = response_json["choices"][0]["delta"]["content"]
-            await message.channel.send(assistant_response)
+            for chunk in completion:
+                completion_text += (chunk.choices[0].delta.content or "")
+                # print(chunk.choices[0].delta.content or "", end="")
+            # assistant_response = response_json["choices"][0]["delta"]["content"]
+            await message.channel.send(completion_text)
             
             # data = {
             #     "model": "mistral",
