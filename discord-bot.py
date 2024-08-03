@@ -43,21 +43,46 @@ client = commands.Bot(command_prefix='!', intents=intents)
 @client.event
 async def on_member_join(member):    
     channel = client.get_channel(611027490848374822)
-        
+    
     fullq = f"Talk like an angry unix administrator and make your response short. Dont state who you are. Dont say that your angry or say the word angrily. Welcome {member.mention} to the ProLUG discord and encourage them to ask questions about linux. Make sure to state their name in the welcome message. Limit the response to two sentences."
+    # Set request data
     data = {
-            "model": "mistral",
-            "prompt": fullq,
-            "stream": False
-    }
-    response = requests.post(f"http://{llm_host}:11434/api/generate", json=data)
-    response_data = response.json()
-    if response_data['response'].startswith('Angrily:'):
-        response_data['response'] = response_data['response'][8:]
-    if response_data['response'].startswith('"'):
-        response_data['response'] = response_data['response'][1:-1]
+            "messages": [
+                {
+                    "role": "user",
+                    "content": fullq
+                }
+            ],
+            "model": "mixtral-8x7b-32768",
+            "temperature": 1,
+            "max_tokens": 1024,
+            "top_p": 1,
+            "stream": False,
+            "stop": None
+        }
 
-    await channel.send(response_data['response'])
+        # Make the HTTP request
+        response = requests.post(url, headers=headers, data=json.dumps(data))
+
+        # Get the response content as a JSON object
+        response_json = response.json()
+        groq_response= (response_json['choices'][0]['message']['content'])
+        await message.channel.send(groq_response)
+
+    # fullq = f"Talk like an angry unix administrator and make your response short. Dont state who you are. Dont say that your angry or say the word angrily. Welcome {member.mention} to the ProLUG discord and encourage them to ask questions about linux. Make sure to state their name in the welcome message. Limit the response to two sentences."
+    # data = {
+    #         "model": "mistral",
+    #         "prompt": fullq,
+    #         "stream": False
+    # }
+    # response = requests.post(f"http://{llm_host}:11434/api/generate", json=data)
+    # response_data = response.json()
+    # if response_data['response'].startswith('Angrily:'):
+    #     response_data['response'] = response_data['response'][8:]
+    # if response_data['response'].startswith('"'):
+    #     response_data['response'] = response_data['response'][1:-1]
+
+    # await channel.send(response_data['response'])
 
     # Check if user_count is divisible by 500 and congratulate them
     if int(member.guild.member_count) % 500 == 0:
