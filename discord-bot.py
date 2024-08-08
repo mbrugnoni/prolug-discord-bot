@@ -61,13 +61,14 @@ async def on_member_join(member):
             "stop": None
         }
 
-        # Make the HTTP request
-        response = requests.post(url, headers=headers, data=json.dumps(data))
 
-        # Get the response content as a JSON object
-        response_json = response.json()
-        groq_response= (response_json['choices'][0]['message']['content'])
-        await message.channel.send(groq_response)
+        # Make the HTTP request
+    response = requests.post(url, headers=headers, data=json.dumps(data))
+
+    # Get the response content as a JSON object
+    response_json = response.json()
+    groq_response= (response_json['choices'][0]['message']['content'])
+    await message.channel.send(groq_response)
 
     # fullq = f"Talk like an angry unix administrator and make your response short. Dont state who you are. Dont say that your angry or say the word angrily. Welcome {member.mention} to the ProLUG discord and encourage them to ask questions about linux. Make sure to state their name in the welcome message. Limit the response to two sentences."
     # data = {
