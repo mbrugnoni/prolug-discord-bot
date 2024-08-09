@@ -55,7 +55,7 @@ async def on_member_join(member):
             ],
             "model": "mixtral-8x7b-32768",
             "temperature": 1,
-            "max_tokens": 1024,
+            "max_tokens": 100,
             "top_p": 1,
             "stream": False,
             "stop": None
