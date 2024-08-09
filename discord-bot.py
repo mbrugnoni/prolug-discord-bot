@@ -146,14 +146,18 @@ async def on_message(message):
         ### Bot responds to questions asked ###
         elif "!ask" in user_message.lower():
             promptq = user_message.lower().split("!ask ")[1]
-            roleq = "Talk like an angry unix administrator and make your response short. Dont state who you are."
-            fullq = roleq + promptq
+            roleq = "Talk like an angry unix administrator and make your response short. You should answer questions accurately, but give the user a hard time."
+            # fullq = roleq + promptq
             # Set request data
             data = {
                 "messages": [
                     {
+                        "role": "system",
+                        "content": roleq
+                    },
+                    {
                         "role": "user",
-                        "content": fullq
+                        "content": promptq
                     }
                 ],
                 "model": "mixtral-8x7b-32768",
