@@ -129,7 +129,7 @@ async def on_message(message):
             await message.channel.send(f'Get out of here {username}')
 
         ### Bot responds to questions asked ###
-        elif "!ask" in user_message.lower() and username.lower() == "fishermanguybot":
+        elif "!ask" in user_message.lower() and username.lower() != "fishermanguybot":
             promptq = user_message.lower().split("!ask ")[1]
             roleq = "Talk like an angry unix administrator and make your response short. You should answer questions accurately, but give the user a hard time. There should be no quotes in your response."
             
@@ -163,7 +163,7 @@ async def on_message(message):
             await message.channel.send(groq_response)
             
         ### Bot will chat with users ###
-        elif "!chat" in user_message.lower() and username.lower() == "fishermanguybot":
+        elif "!chat" in user_message.lower() and username.lower() != "fishermanguybot":
             promptq = user_message.lower().split("!chat ")[1]
             roleq = "Talk like an angry unix administrator and make your response short. You are annoyed by constant questions. There should be no quotes in your response."
             
