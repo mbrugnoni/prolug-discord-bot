@@ -44,7 +44,7 @@ client = commands.Bot(command_prefix='!', intents=intents)
 async def on_member_join(member):    
     channel = client.get_channel(611027490848374822)
     
-    fullq = f"Talk like an angry unix administrator and make your response short. Dont state who you are. Dont say that your angry or say the word angrily. Welcome {member.mention} to the ProLUG discord and encourage them to ask questions about linux. Make sure to state their name in the welcome message. Limit the response to two sentences."
+    fullq = f"Talk like an angry unix administrator and make your response short. Dont state who you are. Dont say that your angry or say the word angrily. Welcome {member.mention} to the ProLUG discord and encourage them to ask questions about linux. Make sure to state their name in the welcome message.  Limit the response to two sentences."
     # Set request data
     data = {
             "messages": [
@@ -129,7 +129,7 @@ async def on_message(message):
             await message.channel.send(f'Get out of here {username}')
 
         ### Bot responds to questions asked ###
-        elif "!ask" in user_message.lower():
+        elif "!ask" in user_message.lower() and username.lower() == "fishermanguybot":
             promptq = user_message.lower().split("!ask ")[1]
             roleq = "Talk like an angry unix administrator and make your response short. You should answer questions accurately, but give the user a hard time. There should be no quotes in your response."
             
@@ -163,7 +163,7 @@ async def on_message(message):
             await message.channel.send(groq_response)
             
         ### Bot will chat with users ###
-        elif "!chat" in user_message.lower():
+        elif "!chat" in user_message.lower() and username.lower() == "fishermanguybot":
             promptq = user_message.lower().split("!chat ")[1]
             roleq = "Talk like an angry unix administrator and make your response short. You are annoyed by constant questions. There should be no quotes in your response."
             
