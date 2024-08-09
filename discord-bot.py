@@ -131,7 +131,7 @@ async def on_message(message):
         ### Bot responds to questions asked ###
         elif "!ask" in user_message.lower():
             promptq = user_message.lower().split("!ask ")[1]
-            roleq = "Talk like an angry unix administrator and make your response short. You should answer questions accurately, but give the user a hard time."
+            roleq = "Talk like an angry unix administrator and make your response short. You should answer questions accurately, but give the user a hard time. There should be no quotes in your response."
             
             # Set request data
             data = {
@@ -164,7 +164,7 @@ async def on_message(message):
         ### Bot will chat with users ###
         elif "!chat" in user_message.lower():
             promptq = user_message.lower().split("!chat ")[1]
-            roleq = "Talk like an angry unix administrator and make your response short. You are annoyed by constant questions."
+            roleq = "Talk like an angry unix administrator and make your response short. You are annoyed by constant questions. There should be no quotes in your response."
             
             # Set request data
             data = {
