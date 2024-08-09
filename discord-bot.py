@@ -163,7 +163,7 @@ async def on_message(message):
             
         ### Bot will chat with users ###
         elif "!chat" in user_message.lower():
-            promptq = user_message.lower().split("!ask ")[1]
+            promptq = user_message.lower().split("!chat ")[1]
             roleq = "Talk like an angry unix administrator and make your response short. You are annoyed by constant questions."
             
             # Set request data
