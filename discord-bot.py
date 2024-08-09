@@ -158,6 +158,7 @@ async def on_message(message):
 
             # Get the response content as a JSON object
             response_json = response.json()
+            print(response_json)
             groq_response= (response_json['choices'][0]['message']['content'])
             await message.channel.send(groq_response)
             
