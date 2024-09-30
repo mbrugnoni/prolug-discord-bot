@@ -241,7 +241,7 @@ async def export_thread(ctx, thread_id: int):
             ],
             "model": "mixtral-8x7b-32768",
             "temperature": 0.7,
-            "max_tokens": 1024,
+            "max_tokens": 32000,
             "top_p": 1,
             "stream": False,
             "stop": None
