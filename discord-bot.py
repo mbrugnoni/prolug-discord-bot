@@ -469,19 +469,6 @@ async def on_message(message):
             )
             await message.channel.send(task_syntax)
 
-        # Add this new elif block to handle the !export_thread command
-        elif user_message.lower().startswith("!export_thread"):
-            # Check if the user is authorized
-            if username.lower() in ["fishermanguybro", "het_tanis"]:
-                # Extract the thread ID from the message
-                try:
-                    thread_id = int(user_message.split()[1])
-                    await export_thread(message.channel, thread_id)
-                except (IndexError, ValueError):
-                    await message.channel.send("Please provide a valid thread ID. Usage: !export_thread <thread_id>")
-            else:
-                await message.channel.send("You are not authorized to use this command.")
-
     # Add this at the end of the on_message function
     await client.process_commands(message)
 
