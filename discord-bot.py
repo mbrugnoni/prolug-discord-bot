@@ -268,7 +268,7 @@ async def export_thread(ctx, thread_id: int):
             summary = "\n\n".join(summaries)
         else:
             # Prepare the prompt for the LLM
-            prompt = f"Please summarize the important information and key terms from the following text:\n\n{thread_content}"
+            prompt = f"Summarize the important information and key terms from the following text:\n\n{thread_content}\n\nSummary:"
 
             # Set request data for the LLM
             data = {
@@ -278,9 +278,9 @@ async def export_thread(ctx, thread_id: int):
                         "content": prompt
                     }
                 ],
-                "model": "mixtral-8x7b-32768",
+                "model": "llama-3.2-90b-text-preview",
                 "temperature": 0.7,
-                "max_tokens": 32000,  # Or your original value
+                "max_tokens": 32000,
                 "top_p": 1,
                 "stream": False,
                 "stop": None
