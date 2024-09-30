@@ -17,6 +17,7 @@ This Discord bot is designed to enhance the ProLUG server experience by providin
 - Joke Generator: Fetches and shares jokes from an external API
 - Lab and Resource Links: Provides quick access to learning resources
 - Bot Statistics: Displays welcome message and question answering stats
+- Thread Export: Allows authorized users to export and summarize thread content
 
 ## Installation
 
@@ -70,10 +71,12 @@ python discord-bot.py
 - `!task remove <task_id>`: Remove a specific task
 - `!task complete <task_id>`: Mark a task as completed
 - `!bot_stats`: Display bot statistics for welcome messages and questions answered
+- `!export_thread <thread_id>`: Export and summarize a thread (authorized users only)
 
 ## Upcoming Features
 
 - [ ] Add sentiment analysis to chat functionality
+- [x] Thread export and summarization feature
 
 Legend:
 - [ ] : Planned
