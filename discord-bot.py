@@ -37,18 +37,18 @@ intents.members = True
 intents.message_content = True
 client = commands.Bot(command_prefix='!', intents=intents)
 
-### Function to increment and track welcome message count ###
-def increment_welcome_count():
+### Function to increment and track counts ###
+def increment_count(count_type):
     try:
         # Read current counts
         with open("counts.json", "r") as f:
             counts = json.load(f)
     except FileNotFoundError:
         # If file doesn't exist, start counts at 0
-        counts = {"all_time": 0, "weekly": {}}
+        counts = {"welcome": {"all_time": 0, "weekly": {}}, "ask": {"all_time": 0, "weekly": {}}}
     
     # Increment all-time count
-    counts["all_time"] += 1
+    counts[count_type]["all_time"] += 1
     
     # Get current week number
     current_week = datetime.now().isocalendar()[1]
@@ -56,9 +56,9 @@ def increment_welcome_count():
     week_key = f"{current_year}-{current_week}"
     
     # Increment weekly count
-    if week_key not in counts["weekly"]:
-        counts["weekly"][week_key] = 0
-    counts["weekly"][week_key] += 1
+    if week_key not in counts[count_type]["weekly"]:
+        counts[count_type]["weekly"][week_key] = 0
+    counts[count_type]["weekly"][week_key] += 1
     
     # Write updated counts back to file
     with open("counts.json", "w") as f:
@@ -95,7 +95,7 @@ async def on_member_join(member):
     await channel.send(groq_response)
 
     # Increment welcome message count
-    increment_welcome_count()
+    increment_count("welcome")
 
     # Check if user_count is divisible by 500 and congratulate them
     if int(member.guild.member_count) % 500 == 0:
