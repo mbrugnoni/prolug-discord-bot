@@ -68,11 +68,9 @@ python discord-bot.py
 
 ## Upcoming Features
 
-- [x] Add tracking for number of times bot has completed an activity
-        --- Welcomed users
-        --- Answered questions
 - [ ] Add a task tracker for working/pomodoro sessions
 - [ ] Add sentiment analysis to chat functionality
+
 Legend:
 - [ ] : Planned
 - [x] : In-progress

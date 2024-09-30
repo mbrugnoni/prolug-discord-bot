@@ -133,6 +133,19 @@ def get_eight_ball_response(question):
 async def on_ready():
     print("Logged in as a bot {0.user}".format(client))
 
+### New function to list tasks ###
+def get_user_tasks(username):
+    user_tasks = []
+    try:
+        with open("user_tasks.txt", "r") as task_file:
+            for line in task_file:
+                task_username, task_id, task_description = line.strip().split("|", 2)
+                if task_username.lower() == username.lower():
+                    user_tasks.append(f"ID: {task_id} - {task_description}")
+    except FileNotFoundError:
+        return []
+    return user_tasks
+
 @client.event
 async def on_message(message):
     username = str(message.author).split("#")[0]
@@ -299,6 +312,15 @@ async def on_message(message):
                 await message.channel.send(f"Task added successfully. Task ID: {unique_id}")
             except Exception as e:
                 await message.channel.send(f"Error adding task: {str(e)}")
+
+        ### New function to list tasks ###
+        elif user_message.lower() == "!task list":
+            user_tasks = get_user_tasks(message.author.name)
+            if user_tasks:
+                task_list = "\n".join(user_tasks)
+                await message.channel.send(f"Your tasks:\n{task_list}")
+            else:
+                await message.channel.send("You have no tasks.")
 
         elif user_message.lower() == "!bot_stats":
             try:
