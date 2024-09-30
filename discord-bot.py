@@ -520,4 +520,10 @@ async def on_message(message):
     # Add this at the end of the on_message function
     await client.process_commands(message)
 
+@client.event
+async def on_command_error(ctx, error):
+    if isinstance(error, commands.CommandNotFound):
+        return
+    raise error
+
 client.run(f'{discordKey}')
