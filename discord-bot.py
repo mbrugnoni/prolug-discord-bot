@@ -146,6 +146,27 @@ def get_user_tasks(username):
         return []
     return user_tasks
 
+### Function to remove a task ###
+def remove_task(username, task_id):
+    tasks = []
+    removed = False
+    try:
+        with open("user_tasks.txt", "r") as task_file:
+            for line in task_file:
+                task_username, current_task_id, task_description = line.strip().split("|", 2)
+                if task_username.lower() == username.lower() and current_task_id == task_id:
+                    removed = True
+                else:
+                    tasks.append(line)
+        
+        if removed:
+            with open("user_tasks.txt", "w") as task_file:
+                task_file.writelines(tasks)
+            return True
+        return False
+    except FileNotFoundError:
+        return False
+
 @client.event
 async def on_message(message):
     username = str(message.author).split("#")[0]
@@ -294,7 +315,7 @@ async def on_message(message):
         
         ### Tell users the commands available ###
         elif user_message.lower() == "!commands":
-            await message.channel.send(f'I currently support: !labs, !book, !8ball, !roll, !coinflip, !server_age, !user_count, !commands, !joke, !task add, !bot_stats, and some other nonsense.')
+            await message.channel.send(f'I currently support: !labs, !book, !8ball, !roll, !coinflip, !server_age, !user_count, !commands, !joke, !task add, !task list, !task remove, !bot_stats, and some other nonsense.')
         
         ### Update this to joke API ###
         elif user_message.lower() == "!joke":            
@@ -321,6 +342,14 @@ async def on_message(message):
                 await message.channel.send(f"Your tasks:\n{task_list}")
             else:
                 await message.channel.send("You have no tasks.")
+
+        ### New function to remove tasks ###
+        elif user_message.lower().startswith("!task remove "):
+            task_id = user_message.lower().split("!task remove ")[1].strip()
+            if remove_task(message.author.name, task_id):
+                await message.channel.send(f"Task with ID {task_id} has been removed.")
+            else:
+                await message.channel.send(f"No task found with ID {task_id} for your user.")
 
         elif user_message.lower() == "!bot_stats":
             try:
