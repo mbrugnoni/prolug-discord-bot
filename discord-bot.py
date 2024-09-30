@@ -238,7 +238,7 @@ async def export_thread(ctx, thread_id: int):
             return
 
         # Prepare the prompt for the LLM
-        prompt = f"Please summarize the following text:\n\n{thread_content}"
+        prompt = f"Please summarize the important information and key terms from the following text:\n\n{thread_content}"
 
         # Set request data for the LLM
         data = {
