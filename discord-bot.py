@@ -20,6 +20,7 @@ config.read('.env')
 discordKey = config['DEFAULT']['discordKey']
 session_aod = config['DEFAULT']['session']
 groq_key = config['DEFAULT']['GROQ_API_KEY']
+perplexity_api_key = config['DEFAULT']['PERPLEXITY_API_KEY']
 
 # Set API key and endpoint URL
 # GROQ_API_KEY = "your_api_key_here"
@@ -29,6 +30,15 @@ llm_host = '192.168.50.133' ### Update to wherever Ollama is running
 headers = {
     "Content-Type": "application/json",
     "Authorization": f"Bearer {groq_key}"
+}
+
+# Update the API endpoint for Perplexity
+perplexity_url = "https://api.perplexity.ai/chat/completions"
+
+# Update headers for Perplexity API
+perplexity_headers = {
+    "Authorization": f"Bearer {perplexity_api_key}",
+    "Content-Type": "application/json"
 }
 
 ### Need this for welcome message??? Maybe ###
@@ -232,75 +242,47 @@ async def export_thread(ctx, thread_id: int):
         # Join messages into a single string
         thread_content = "\n".join(messages)
 
-        # Add a check for content length
-        if len(thread_content) > 32000:
-            chunks = [thread_content[i:i+32000] for i in range(0, len(thread_content), 32000)]
-            summaries = []
-            for chunk in chunks:
-                prompt = f"Please summarize the important information and key terms from the following text:\n\n{chunk}"
-                data = {
-                    "messages": [{"role": "user", "content": prompt}],
-                    "model": "mixtral-8x7b-32768",
-                    "temperature": 0.7,
-                    "max_tokens": 32000,
-                    "top_p": 1,
-                    "stream": False,
-                    "stop": None
+        # Prepare the prompt for the LLM
+        prompt = f"Summarize the important information and key terms from the following text:\n\n{thread_content}\n\nSummary:"
+
+        # Set request data for the LLM
+        payload = {
+            "model": "llama-3.1-sonar-small-128k-online",
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "You are a helpful assistant that summarizes Discord thread conversations. Be precise and concise."
+                },
+                {
+                    "role": "user",
+                    "content": prompt
                 }
+            ],
+            "max_tokens": 1024,
+            "temperature": 0.2,
+            "top_p": 0.9,
+            "return_citations": False,
+            "search_domain_filter": ["perplexity.ai"],
+            "return_images": False,
+            "return_related_questions": False,
+            "search_recency_filter": "month",
+            "top_k": 0,
+            "stream": False,
+            "presence_penalty": 0,
+            "frequency_penalty": 1
+        }
 
-                # Add retry logic
-                max_retries = 3
-                for attempt in range(max_retries):
-                    try:
-                        response = requests.post(url, headers=headers, data=json.dumps(data))
-                        response.raise_for_status()
-                        break
-                    except requests.exceptions.RequestException as e:
-                        if attempt == max_retries - 1:
-                            raise
-                        await ctx.send(f"API request failed. Retrying in 5 seconds... (Attempt {attempt + 1}/{max_retries})")
-                        time.sleep(5)
+        # Make the HTTP request to the LLM
+        response = requests.post(perplexity_url, json=payload, headers=perplexity_headers)
 
-                response_json = response.json()
-                summaries.append(response_json['choices'][0]['message']['content'])
-                time.sleep(1)  # Add a delay between requests
+        # Check if the request was successful
+        response.raise_for_status()
 
-            summary = "\n\n".join(summaries)
-        else:
-            # Prepare the prompt for the LLM
-            prompt = f"Summarize the important information and key terms from the following text:\n\n{thread_content}\n\nSummary:"
+        # Get the response content as a JSON object
+        response_json = response.json()
 
-            # Set request data for the LLM
-            data = {
-                "messages": [
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ],
-                "model": "mixtral-8x7b-32768",
-                "temperature": 0.7,
-                "max_tokens": 32000,  # Or your original value
-                "top_p": 1,
-                "stream": False,
-                "stop": None
-            }
-
-            # Make the HTTP request to the LLM
-            response = requests.post(url, headers=headers, data=json.dumps(data))
-
-            # Check if the request was successful
-            response.raise_for_status()
-
-            # Get the response content as a JSON object
-            response_json = response.json()
-
-            # Check if 'choices' key exists in the response
-            if 'choices' not in response_json:
-                await ctx.send(f"Unexpected API response format. Full response: {response_json}")
-                return
-
-            summary = response_json['choices'][0]['message']['content']
+        # Extract the summary from the response
+        summary = response_json['choices'][0]['message']['content']
 
         # Send the summary as a message in Discord
         await ctx.send(f"Thread Summary for thread ID {thread_id}:\n\n{summary}")
@@ -316,7 +298,6 @@ async def export_thread(ctx, thread_id: int):
         await ctx.send(f"Unexpected response format from LLM API. Missing key: {str(e)}")
     except Exception as e:
         await ctx.send(f"An unexpected error occurred: {str(e)}")
-        # Optionally, log the full error for debugging
         print(f"Full error: {repr(e)}")
 
 @client.event
