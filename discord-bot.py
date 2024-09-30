@@ -258,7 +258,7 @@ async def export_thread(ctx, thread_id: int):
                     "content": prompt
                 }
             ],
-            "max_tokens": 1024,
+            "max_tokens": 4096,  # Increased max_tokens
             "temperature": 0.2,
             "top_p": 0.9,
             "return_citations": False,
@@ -284,8 +284,13 @@ async def export_thread(ctx, thread_id: int):
         # Extract the summary from the response
         summary = response_json['choices'][0]['message']['content']
 
-        # Send the summary as a message in Discord
-        await ctx.send(f"Thread Summary for thread ID {thread_id}:\n\n{summary}")
+        # Split the summary into chunks of 1900 characters (leaving room for formatting)
+        summary_chunks = [summary[i:i+1900] for i in range(0, len(summary), 1900)]
+
+        # Send the summary as multiple messages in Discord
+        await ctx.send(f"Thread Summary for thread ID {thread_id}:")
+        for i, chunk in enumerate(summary_chunks, 1):
+            await ctx.send(f"Part {i}/{len(summary_chunks)}:\n\n{chunk}")
 
     except discord.NotFound:
         await ctx.send("Thread not found. Please check the thread ID.")
