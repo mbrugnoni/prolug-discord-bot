@@ -318,10 +318,10 @@ async def on_message(message):
                 
                 await message.channel.send(f"Bot Statistics:\n"
                                            f"Welcome messages:\n"
-                                           f"  All-time: {welcome_all_time}\n"
+                                           f"  All-time (as of 9/29/2024): {welcome_all_time}\n"
                                            f"  This week (Week {current_week}): {welcome_weekly}\n"
                                            f"Questions answered:\n"
-                                           f"  All-time: {ask_all_time}\n"
+                                           f"  All-time (as of 9/29/2024): {ask_all_time}\n"
                                            f"  This week (Week {current_week}): {ask_weekly}")
             except FileNotFoundError:
                 await message.channel.send("No stats available yet!")
