@@ -232,45 +232,75 @@ async def export_thread(ctx, thread_id: int):
         # Join messages into a single string
         thread_content = "\n".join(messages)
 
-        # Check if the thread content is too long
-        if len(thread_content) > 32000:  # Adjust this limit as needed
-            await ctx.send("The thread content is too long to summarize. Please try a shorter thread.")
-            return
-
-        # Prepare the prompt for the LLM
-        prompt = f"Please summarize the important information and key terms from the following text:\n\n{thread_content}"
-
-        # Set request data for the LLM
-        data = {
-            "messages": [
-                {
-                    "role": "user",
-                    "content": prompt
+        # Add a check for content length
+        if len(thread_content) > 32000:
+            chunks = [thread_content[i:i+32000] for i in range(0, len(thread_content), 32000)]
+            summaries = []
+            for chunk in chunks:
+                prompt = f"Please summarize the important information and key terms from the following text:\n\n{chunk}"
+                data = {
+                    "messages": [{"role": "user", "content": prompt}],
+                    "model": "mixtral-8x7b-32768",
+                    "temperature": 0.7,
+                    "max_tokens": 32000,
+                    "top_p": 1,
+                    "stream": False,
+                    "stop": None
                 }
-            ],
-            "model": "mixtral-8x7b-32768",
-            "temperature": 0.7,
-            "max_tokens": 32000,  # Or your original value
-            "top_p": 1,
-            "stream": False,
-            "stop": None
-        }
 
-        # Make the HTTP request to the LLM
-        response = requests.post(url, headers=headers, data=json.dumps(data))
+                # Add retry logic
+                max_retries = 3
+                for attempt in range(max_retries):
+                    try:
+                        response = requests.post(url, headers=headers, data=json.dumps(data))
+                        response.raise_for_status()
+                        break
+                    except requests.exceptions.RequestException as e:
+                        if attempt == max_retries - 1:
+                            raise
+                        await ctx.send(f"API request failed. Retrying in 5 seconds... (Attempt {attempt + 1}/{max_retries})")
+                        time.sleep(5)
 
-        # Check if the request was successful
-        response.raise_for_status()
+                response_json = response.json()
+                summaries.append(response_json['choices'][0]['message']['content'])
+                time.sleep(1)  # Add a delay between requests
 
-        # Get the response content as a JSON object
-        response_json = response.json()
+            summary = "\n\n".join(summaries)
+        else:
+            # Prepare the prompt for the LLM
+            prompt = f"Please summarize the important information and key terms from the following text:\n\n{thread_content}"
 
-        # Check if 'choices' key exists in the response
-        if 'choices' not in response_json:
-            await ctx.send(f"Unexpected API response format. Full response: {response_json}")
-            return
+            # Set request data for the LLM
+            data = {
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                "model": "mixtral-8x7b-32768",
+                "temperature": 0.7,
+                "max_tokens": 32000,  # Or your original value
+                "top_p": 1,
+                "stream": False,
+                "stop": None
+            }
 
-        summary = response_json['choices'][0]['message']['content']
+            # Make the HTTP request to the LLM
+            response = requests.post(url, headers=headers, data=json.dumps(data))
+
+            # Check if the request was successful
+            response.raise_for_status()
+
+            # Get the response content as a JSON object
+            response_json = response.json()
+
+            # Check if 'choices' key exists in the response
+            if 'choices' not in response_json:
+                await ctx.send(f"Unexpected API response format. Full response: {response_json}")
+                return
+
+            summary = response_json['choices'][0]['message']['content']
 
         # Send the summary as a message in Discord
         await ctx.send(f"Thread Summary for thread ID {thread_id}:\n\n{summary}")
@@ -279,8 +309,9 @@ async def export_thread(ctx, thread_id: int):
         await ctx.send("Thread not found. Please check the thread ID.")
     except discord.Forbidden:
         await ctx.send("I don't have permission to access this thread.")
-    except requests.RequestException as e:
+    except requests.exceptions.RequestException as e:
         await ctx.send(f"Error making request to LLM API: {str(e)}")
+        print(f"Full error: {repr(e)}")
     except KeyError as e:
         await ctx.send(f"Unexpected response format from LLM API. Missing key: {str(e)}")
     except Exception as e:
