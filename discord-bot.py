@@ -240,7 +240,7 @@ async def export_thread(ctx, thread_id: int):
                 prompt = f"Please summarize the important information and key terms from the following text:\n\n{chunk}"
                 data = {
                     "messages": [{"role": "user", "content": prompt}],
-                    "model": "mixtral-8x7b-32768",
+                    "model": "llama-3.2-90b-text-preview",
                     "temperature": 0.7,
                     "max_tokens": 32000,
                     "top_p": 1,
