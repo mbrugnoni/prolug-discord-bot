@@ -40,19 +40,29 @@ client = commands.Bot(command_prefix='!', intents=intents)
 ### Function to increment and track welcome message count ###
 def increment_welcome_count():
     try:
-        # Read current count
-        with open("counts.txt", "r") as f:
-            count = int(f.read().strip())
+        # Read current counts
+        with open("counts.json", "r") as f:
+            counts = json.load(f)
     except FileNotFoundError:
-        # If file doesn't exist, start count at 0
-        count = 0
+        # If file doesn't exist, start counts at 0
+        counts = {"all_time": 0, "weekly": {}}
     
-    # Increment count
-    count += 1
+    # Increment all-time count
+    counts["all_time"] += 1
     
-    # Write updated count back to file
-    with open("counts.txt", "w") as f:
-        f.write(str(count))
+    # Get current week number
+    current_week = datetime.now().isocalendar()[1]
+    current_year = datetime.now().year
+    week_key = f"{current_year}-{current_week}"
+    
+    # Increment weekly count
+    if week_key not in counts["weekly"]:
+        counts["weekly"][week_key] = 0
+    counts["weekly"][week_key] += 1
+    
+    # Write updated counts back to file
+    with open("counts.json", "w") as f:
+        json.dump(counts, f)
 
 ### Welcome new members when they join ###
 @client.event
@@ -289,9 +299,20 @@ async def on_message(message):
 
         elif user_message.lower() == "!welcome_count":
             try:
-                with open("counts.txt", "r") as f:
-                    count = int(f.read().strip())
-                await message.channel.send(f"I have welcomed {count} new members so far!")
+                with open("counts.json", "r") as f:
+                    counts = json.load(f)
+                
+                all_time_count = counts["all_time"]
+                
+                # Get current week number
+                current_week = datetime.now().isocalendar()[1]
+                current_year = datetime.now().year
+                week_key = f"{current_year}-{current_week}"
+                
+                weekly_count = counts["weekly"].get(week_key, 0)
+                
+                await message.channel.send(f"I have welcomed {all_time_count} new members in total!\n"
+                                       f"This week (Week {current_week}), I've welcomed {weekly_count} new members.")
             except FileNotFoundError:
                 await message.channel.send("I haven't welcomed any new members yet!")
 
