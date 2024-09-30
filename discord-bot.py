@@ -228,8 +228,13 @@ async def export_thread(ctx, thread_id: int):
         # Join messages into a single string
         thread_content = "\n".join(messages)
 
+        # Check if the thread content is too long
+        if len(thread_content) > 32000:  # Adjust this limit as needed
+            await ctx.send("The thread content is too long to summarize. Please try a shorter thread.")
+            return
+
         # Prepare the prompt for the LLM
-        prompt = f"Can you pull out the key terms and important information from the following text:\n\n{thread_content}"
+        prompt = f"Please summarize the following text:\n\n{thread_content}"
 
         # Set request data for the LLM
         data = {
@@ -241,7 +246,7 @@ async def export_thread(ctx, thread_id: int):
             ],
             "model": "mixtral-8x7b-32768",
             "temperature": 0.7,
-            "max_tokens": 32000,
+            "max_tokens": 4096,  # Or your original value
             "top_p": 1,
             "stream": False,
             "stop": None
@@ -250,8 +255,17 @@ async def export_thread(ctx, thread_id: int):
         # Make the HTTP request to the LLM
         response = requests.post(url, headers=headers, data=json.dumps(data))
 
+        # Check if the request was successful
+        response.raise_for_status()
+
         # Get the response content as a JSON object
         response_json = response.json()
+
+        # Check if 'choices' key exists in the response
+        if 'choices' not in response_json:
+            await ctx.send(f"Unexpected API response format. Full response: {response_json}")
+            return
+
         summary = response_json['choices'][0]['message']['content']
 
         # Send the summary as a message in Discord
@@ -261,8 +275,14 @@ async def export_thread(ctx, thread_id: int):
         await ctx.send("Thread not found. Please check the thread ID.")
     except discord.Forbidden:
         await ctx.send("I don't have permission to access this thread.")
+    except requests.RequestException as e:
+        await ctx.send(f"Error making request to LLM API: {str(e)}")
+    except KeyError as e:
+        await ctx.send(f"Unexpected response format from LLM API. Missing key: {str(e)}")
     except Exception as e:
-        await ctx.send(f"An error occurred: {str(e)}")
+        await ctx.send(f"An unexpected error occurred: {str(e)}")
+        # Optionally, log the full error for debugging
+        print(f"Full error: {repr(e)}")
 
 @client.event
 async def on_message(message):
