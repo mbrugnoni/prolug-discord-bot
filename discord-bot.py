@@ -203,6 +203,43 @@ def complete_task(username, task_id):
     except FileNotFoundError:
         return False, 0
 
+def is_authorized_user():
+    async def predicate(ctx):
+        authorized_users = ["fishermanguybro", "het_tanis"]
+        return ctx.author.name.lower() in authorized_users
+    return commands.check(predicate)
+
+@client.command()
+@is_authorized_user()
+async def export_thread(ctx, thread_id: int):
+    try:
+        # Fetch the thread
+        thread = await client.fetch_channel(thread_id)
+        
+        if not isinstance(thread, discord.Thread):
+            await ctx.send("The provided ID does not belong to a thread.")
+            return
+
+        # Fetch all messages in the thread
+        messages = []
+        async for message in thread.history(limit=None, oldest_first=True):
+            messages.append(f"{message.author.name}: {message.content}")
+
+        # Write messages to a file
+        filename = f"thread_{thread_id}.txt"
+        with open(filename, "w", encoding="utf-8") as file:
+            file.write("\n".join(messages))
+
+        # Send the file to the user
+        await ctx.send(f"Thread exported successfully!", file=discord.File(filename))
+
+    except discord.NotFound:
+        await ctx.send("Thread not found. Please check the thread ID.")
+    except discord.Forbidden:
+        await ctx.send("I don't have permission to access this thread.")
+    except Exception as e:
+        await ctx.send(f"An error occurred: {str(e)}")
+
 @client.event
 async def on_message(message):
     username = str(message.author).split("#")[0]
