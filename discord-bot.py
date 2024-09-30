@@ -12,6 +12,7 @@ from time import sleep
 from collections import defaultdict
 import configparser
 import time
+import uuid  # Add this import for generating unique IDs
 
 ### Getting the discord key from the .env file ###
 config = configparser.ConfigParser()
@@ -30,14 +31,28 @@ headers = {
     "Authorization": f"Bearer {groq_key}"
 }
 
-
-
-
 ### Need this for welcome message??? Maybe ###
 intents = discord.Intents.default()
 intents.members = True
 intents.message_content = True
 client = commands.Bot(command_prefix='!', intents=intents)
+
+### Function to increment and track welcome message count ###
+def increment_welcome_count():
+    try:
+        # Read current count
+        with open("counts.txt", "r") as f:
+            count = int(f.read().strip())
+    except FileNotFoundError:
+        # If file doesn't exist, start count at 0
+        count = 0
+    
+    # Increment count
+    count += 1
+    
+    # Write updated count back to file
+    with open("counts.txt", "w") as f:
+        f.write(str(count))
 
 ### Welcome new members when they join ###
 @client.event
@@ -61,14 +76,16 @@ async def on_member_join(member):
             "stop": None
         }
 
-
-        # Make the HTTP request
+    # Make the HTTP request
     response = requests.post(url, headers=headers, data=json.dumps(data))
 
     # Get the response content as a JSON object
     response_json = response.json()
     groq_response= (response_json['choices'][0]['message']['content'])
     await channel.send(groq_response)
+
+    # Increment welcome message count
+    increment_welcome_count()
 
     # Check if user_count is divisible by 500 and congratulate them
     if int(member.guild.member_count) % 500 == 0:
@@ -251,27 +268,31 @@ async def on_message(message):
         
         ### Tell users the commands available ###
         elif user_message.lower() == "!commands":
-            await message.channel.send(f'I currently support: !labs, !book, !8ball, !roll, !coinflip, !server_age, !user_count, !commands, !joke, and some other nonsense.')
+            await message.channel.send(f'I currently support: !labs, !book, !8ball, !roll, !coinflip, !server_age, !user_count, !commands, !joke, !task add, and some other nonsense.')
         
         ### Update this to joke API ###
         elif user_message.lower() == "!joke":            
             await message.channel.send(get_joke())
         
-        # elif user_message.lower() == "!codewars":
-        #     url = 'https://www.codewars.com/api/v1/clans/ProLUG/members'
+        ### New function to add tasks ###
+        elif user_message.lower().startswith("!task add "):
+            task_description = user_message[10:].strip()
+            unique_id = str(uuid.uuid4())[:8]  # Generate a unique ID
+            task_entry = f"{message.author.name}|{unique_id}|{task_description}\n"
+            
+            try:
+                with open("user_tasks.txt", "a") as task_file:
+                    task_file.write(task_entry)
+                await message.channel.send(f"Task added successfully. Task ID: {unique_id}")
+            except Exception as e:
+                await message.channel.send(f"Error adding task: {str(e)}")
 
-        #     response = requests.get(url)
-        #     data = response.json()
-        #     json_data = json.dumps(data)
-        #     parsed = json.loads(json_data)
-
-        #     rank=1
-        #     leaderboard=''
-        #     await message.channel.send('Current ProLUG Codewars Leaderboard:')
-        #     for member in parsed["data"]:                
-        #         leaderboard+=(f'{rank}. {member["username"]} - {member["honor"]}\n')
-        #         rank+=1
-        #     await message.channel.send(leaderboard)
-        #     await message.channel.send(':trophy::trophy::trophy: If you beat FishermanGuyBro, Sending_Grounds or KingBunz by Oct31, you win a Humble Bundle :trophy::trophy::trophy:')
+        elif user_message.lower() == "!welcome_count":
+            try:
+                with open("counts.txt", "r") as f:
+                    count = int(f.read().strip())
+                await message.channel.send(f"I have welcomed {count} new members so far!")
+            except FileNotFoundError:
+                await message.channel.send("I haven't welcomed any new members yet!")
 
 client.run(f'{discordKey}')
