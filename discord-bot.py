@@ -44,8 +44,12 @@ def increment_count(count_type):
         with open("counts.json", "r") as f:
             counts = json.load(f)
     except FileNotFoundError:
-        # If file doesn't exist, start counts at 0
-        counts = {"welcome": {"all_time": 0, "weekly": {}}, "ask": {"all_time": 0, "weekly": {}}}
+        # If file doesn't exist, start with an empty dictionary
+        counts = {}
+    
+    # Ensure the count_type exists in the dictionary
+    if count_type not in counts:
+        counts[count_type] = {"all_time": 0, "weekly": {}}
     
     # Increment all-time count
     counts[count_type]["all_time"] += 1
