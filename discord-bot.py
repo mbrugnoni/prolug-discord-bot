@@ -167,6 +167,42 @@ def remove_task(username, task_id):
     except FileNotFoundError:
         return False
 
+### Function to complete a task and track completion ###
+def complete_task(username, task_id):
+    tasks = []
+    completed = False
+    try:
+        with open("user_tasks.txt", "r") as task_file:
+            for line in task_file:
+                task_username, current_task_id, task_description = line.strip().split("|", 2)
+                if task_username.lower() == username.lower() and current_task_id == task_id:
+                    completed = True
+                else:
+                    tasks.append(line)
+        
+        if completed:
+            with open("user_tasks.txt", "w") as task_file:
+                task_file.writelines(tasks)
+            
+            # Update completion count
+            try:
+                with open("task_completions.json", "r") as f:
+                    completions = json.load(f)
+            except FileNotFoundError:
+                completions = {}
+            
+            if username not in completions:
+                completions[username] = 0
+            completions[username] += 1
+            
+            with open("task_completions.json", "w") as f:
+                json.dump(completions, f)
+            
+            return True, completions[username]
+        return False, 0
+    except FileNotFoundError:
+        return False, 0
+
 @client.event
 async def on_message(message):
     username = str(message.author).split("#")[0]
@@ -315,7 +351,7 @@ async def on_message(message):
         
         ### Tell users the commands available ###
         elif user_message.lower() == "!commands":
-            await message.channel.send(f'I currently support: !labs, !book, !8ball, !roll, !coinflip, !server_age, !user_count, !commands, !joke, !task add, !task list, !task remove, !bot_stats, and some other nonsense.')
+            await message.channel.send(f'I currently support: !labs, !book, !8ball, !roll, !coinflip, !server_age, !user_count, !commands, !joke, !task add, !task list, !task remove, !task complete, !bot_stats, and some other nonsense.')
         
         ### Update this to joke API ###
         elif user_message.lower() == "!joke":            
@@ -348,6 +384,15 @@ async def on_message(message):
             task_id = user_message.lower().split("!task remove ")[1].strip()
             if remove_task(message.author.name, task_id):
                 await message.channel.send(f"Task with ID {task_id} has been removed.")
+            else:
+                await message.channel.send(f"No task found with ID {task_id} for your user.")
+
+        ### New function to complete tasks ###
+        elif user_message.lower().startswith("!task complete "):
+            task_id = user_message.lower().split("!task complete ")[1].strip()
+            completed, total_completed = complete_task(message.author.name, task_id)
+            if completed:
+                await message.channel.send(f"Task with ID {task_id} has been completed. You have completed {total_completed} tasks in total!")
             else:
                 await message.channel.send(f"No task found with ID {task_id} for your user.")
 
