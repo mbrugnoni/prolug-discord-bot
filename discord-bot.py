@@ -225,13 +225,37 @@ async def export_thread(ctx, thread_id: int):
         async for message in thread.history(limit=None, oldest_first=True):
             messages.append(f"{message.author.name}: {message.content}")
 
-        # Write messages to a file
-        filename = f"thread_{thread_id}.txt"
-        with open(filename, "w", encoding="utf-8") as file:
-            file.write("\n".join(messages))
+        # Join messages into a single string
+        thread_content = "\n".join(messages)
 
-        # Send the file to the user
-        await ctx.send(f"Thread exported successfully!", file=discord.File(filename))
+        # Prepare the prompt for the LLM
+        prompt = f"Please summarize the following text:\n\n{thread_content}"
+
+        # Set request data for the LLM
+        data = {
+            "messages": [
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            "model": "mixtral-8x7b-32768",
+            "temperature": 0.7,
+            "max_tokens": 1024,
+            "top_p": 1,
+            "stream": False,
+            "stop": None
+        }
+
+        # Make the HTTP request to the LLM
+        response = requests.post(url, headers=headers, data=json.dumps(data))
+
+        # Get the response content as a JSON object
+        response_json = response.json()
+        summary = response_json['choices'][0]['message']['content']
+
+        # Send the summary as a message in Discord
+        await ctx.send(f"Thread Summary for thread ID {thread_id}:\n\n{summary}")
 
     except discord.NotFound:
         await ctx.send("Thread not found. Please check the thread ID.")
