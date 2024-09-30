@@ -13,9 +13,10 @@ This Discord bot is designed to enhance the ProLUG server experience by providin
 - Chat Functionality: Engages in conversations with users
 - Random Generators: Provides dice rolls, coin flips, and 8-ball responses
 - Server Information: Displays server age and user count
-- Task Management: Allows users to add tasks with unique IDs
+- Task Management: Allows users to add, list, remove, and complete tasks with unique IDs
 - Joke Generator: Fetches and shares jokes from an external API
 - Lab and Resource Links: Provides quick access to learning resources
+- Bot Statistics: Displays welcome message and question answering stats
 
 ## Installation
 
@@ -65,10 +66,13 @@ python discord-bot.py
 - `!commands`: List all available commands
 - `!joke`: Get a random joke
 - `!task add <description>`: Add a new task with a unique ID
+- `!task list`: List all your tasks
+- `!task remove <task_id>`: Remove a specific task
+- `!task complete <task_id>`: Mark a task as completed
+- `!bot_stats`: Display bot statistics for welcome messages and questions answered
 
 ## Upcoming Features
 
-- [ ] Add a task tracker for working/pomodoro sessions
 - [ ] Add sentiment analysis to chat functionality
 
 Legend:

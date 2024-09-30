@@ -422,4 +422,14 @@ async def on_message(message):
             except FileNotFoundError:
                 await message.channel.send("No stats available yet!")
 
+        elif user_message.lower() == "!task":
+            task_syntax = (
+                "Task command syntax:\n"
+                "- Add a task: !task add <task description>\n"
+                "- List your tasks: !task list\n"
+                "- Remove a task: !task remove <task_id>\n"
+                "- Complete a task: !task complete <task_id>"
+            )
+            await message.channel.send(task_syntax)
+
 client.run(f'{discordKey}')
