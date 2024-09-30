@@ -188,7 +188,10 @@ async def on_message(message):
             print(response_json)
             groq_response= (response_json['choices'][0]['message']['content'])
             await message.channel.send(groq_response)
-            
+
+            # Increment ask count
+            increment_count("ask")
+
         ### Bot will chat with users ###
         elif "!chat" in user_message.lower() and username.lower() != "fishermanguybot":
             promptq = user_message.lower().split("!chat ")[1]
@@ -278,7 +281,7 @@ async def on_message(message):
         
         ### Tell users the commands available ###
         elif user_message.lower() == "!commands":
-            await message.channel.send(f'I currently support: !labs, !book, !8ball, !roll, !coinflip, !server_age, !user_count, !commands, !joke, !task add, and some other nonsense.')
+            await message.channel.send(f'I currently support: !labs, !book, !8ball, !roll, !coinflip, !server_age, !user_count, !commands, !joke, !task add, !bot_stats, and some other nonsense.')
         
         ### Update this to joke API ###
         elif user_message.lower() == "!joke":            
@@ -297,23 +300,30 @@ async def on_message(message):
             except Exception as e:
                 await message.channel.send(f"Error adding task: {str(e)}")
 
-        elif user_message.lower() == "!welcome_count":
+        elif user_message.lower() == "!bot_stats":
             try:
                 with open("counts.json", "r") as f:
                     counts = json.load(f)
                 
-                all_time_count = counts["all_time"]
+                welcome_all_time = counts["welcome"]["all_time"]
+                ask_all_time = counts["ask"]["all_time"]
                 
                 # Get current week number
                 current_week = datetime.now().isocalendar()[1]
                 current_year = datetime.now().year
                 week_key = f"{current_year}-{current_week}"
                 
-                weekly_count = counts["weekly"].get(week_key, 0)
+                welcome_weekly = counts["welcome"]["weekly"].get(week_key, 0)
+                ask_weekly = counts["ask"]["weekly"].get(week_key, 0)
                 
-                await message.channel.send(f"I have welcomed {all_time_count} new members in total!\n"
-                                       f"This week (Week {current_week}), I've welcomed {weekly_count} new members.")
+                await message.channel.send(f"Bot Statistics:\n"
+                                           f"Welcome messages:\n"
+                                           f"  All-time: {welcome_all_time}\n"
+                                           f"  This week (Week {current_week}): {welcome_weekly}\n"
+                                           f"Questions answered:\n"
+                                           f"  All-time: {ask_all_time}\n"
+                                           f"  This week (Week {current_week}): {ask_weekly}")
             except FileNotFoundError:
-                await message.channel.send("I haven't welcomed any new members yet!")
+                await message.channel.send("No stats available yet!")
 
 client.run(f'{discordKey}')

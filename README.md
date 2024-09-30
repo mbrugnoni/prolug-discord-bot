@@ -70,7 +70,6 @@ python discord-bot.py
 
 - [x] Add tracking for number of times bot has completed an activity
         --- Welcomed users
-        --- Provided user_count
         --- Answered questions
 - [ ] Add a task tracker for working/pomodoro sessions
 - [ ] Add sentiment analysis to chat functionality
