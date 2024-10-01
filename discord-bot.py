@@ -118,7 +118,7 @@ async def on_member_join(member):
     except (requests.RequestException, KeyError, IndexError, ValueError) as e:
         print(f"Error generating welcome message: {e}")
         # Send a default welcome message if there's an error
-        await channel.send(f"Welcome, {member.mention}! Feel free to ask any Linux questions.")
+        await channel.send(f"Welcome, {member.mention}! Feel free to look around and ask any questions.")
 
     # Increment welcome message count
     increment_count("welcome")
