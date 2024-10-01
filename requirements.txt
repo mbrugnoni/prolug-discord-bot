@@ -1,0 +1,5 @@
+discord.py
+boto3
+requests
+python-dotenv
+configparser
