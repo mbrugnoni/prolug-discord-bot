@@ -83,37 +83,49 @@ def increment_count(count_type):
 async def on_member_join(member):    
     channel = client.get_channel(611027490848374822)
     
-    fullq = f"Talk like an angry unix administrator and make your response short. Dont state who you are. Dont say that your angry or say the word angrily. Welcome {member.mention} to the ProLUG discord and encourage them to ask questions about linux. Make sure to state their name in the welcome message.  Limit the response to two sentences."
-    # Set request data
+    fullq = f"Talk like an angry unix administrator and make your response short. Don't state who you are. Don't say that you're angry or use the word angrily. Welcome {member.mention} to the ProLUG discord and encourage them to ask questions about linux. Make sure to state their name in the welcome message. Limit the response to two sentences."
+    
     data = {
-            "messages": [
-                {
-                    "role": "user",
-                    "content": fullq
-                }
-            ],
-            "model": "mixtral-8x7b-32768",
-            "temperature": 1,
-            "max_tokens": 100,
-            "top_p": 1,
-            "stream": False,
-            "stop": None
-        }
+        "messages": [
+            {
+                "role": "user",
+                "content": fullq
+            }
+        ],
+        "model": "mixtral-8x7b-32768",
+        "temperature": 0.7,  # Reduced for more coherent responses
+        "max_tokens": 1000,   # Increased to allow for longer responses
+        "top_p": 1,
+        "stream": False,
+        "stop": None
+    }
 
-    # Make the HTTP request
-    response = requests.post(url, headers=headers, data=json.dumps(data))
+    try:
+        # Make the HTTP request
+        response = requests.post(url, headers=headers, json=data, timeout=10)
+        response.raise_for_status()  # Raise an exception for bad status codes
 
-    # Get the response content as a JSON object
-    response_json = response.json()
-    groq_response= (response_json['choices'][0]['message']['content'])
-    await channel.send(groq_response)
+        # Get the response content as a JSON object
+        response_json = response.json()
+        groq_response = response_json['choices'][0]['message']['content'].strip()
+
+        # Validate the response
+        if len(groq_response) < 10 or not groq_response.lower().startswith("welcome"):
+            raise ValueError("Invalid response from API")
+
+        await channel.send(groq_response)
+
+    except (requests.RequestException, KeyError, IndexError, ValueError) as e:
+        print(f"Error generating welcome message: {e}")
+        # Send a default welcome message if there's an error
+        await channel.send(f"Welcome, {member.mention}! Feel free to ask any Linux questions.")
 
     # Increment welcome message count
     increment_count("welcome")
 
     # Check if user_count is divisible by 500 and congratulate them
     if int(member.guild.member_count) % 500 == 0:
-        await channel.send(f'Congratulations {member.mention}! You are member number {member.guild.member_count}!')
+        await channel.send(f'🎉🎊 @here - Congratulations {member.mention}! 🎉🎊 You are member number {member.guild.member_count}! 🥳🎈')
 
 ### Joke function ###
 def get_joke():
