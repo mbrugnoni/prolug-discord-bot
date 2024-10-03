@@ -114,11 +114,22 @@ async def on_member_join(member):
             raise ValueError("Invalid response from API")
 
         await channel.send(groq_response)
+        
+        # Add these debug messages
+        print(f"Sent message: {groq_response}")
+        print(f"Member mention: {member.mention}")
+        print(f"Member ID: {member.id}")
 
     except (requests.RequestException, KeyError, IndexError, ValueError) as e:
         print(f"Error generating welcome message: {e}")
         # Send a default welcome message if there's an error
-        await channel.send(f"Welcome, {member.mention}! Feel free to look around and ask any questions.")
+        default_message = f"Welcome, {member.mention}! Feel free to look around and ask any questions."
+        await channel.send(default_message)
+        
+        # Add these debug messages
+        print(f"Sent default message: {default_message}")
+        print(f"Member mention: {member.mention}")
+        print(f"Member ID: {member.id}")
 
     # Increment welcome message count
     increment_count("welcome")
