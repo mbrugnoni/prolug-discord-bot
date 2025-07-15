@@ -1,0 +1,19 @@
+het_tanis: 
+het_tanis: Thread
+kennydied357: High availability refers to the design and configuration of a system or network to make sure it remains operational for as long as possible.
+
+Single Point of Failure - a critical component of a system or network whose failure would cause the entire system or network to have significant downtime.
+
+Redundancy - have duplicate servers, storage, network paths, etc so that if one fails, the other components can pick up the slack without service interruption.
+
+Load balancing - traffic on the network can be distributed across multiple servers to make sure no single resource is overwhelmed.
+
+Clustering - link together multiple servers or systems to act as one unit. Thus, allowing other parts of the cluster to pick up the load if one component fails.
+
+Data replication - make sure data is copied and synced across multiple locations and devices.
+
+Monitoring - Continuously monitor the network and services.
+
+High availability tries to ensure the system remains operational about 99.999% of the time, has the ability to recover quickly from any failures and should have a failover that transfers operations to a standby or backup system. 
+
+Understanding high availability helps administrators during triage as they can quickly identify, prioritize, and resolve issues that might impact service continuity. Plus, understanding the redundancies and failover mechanisms can help admins restore systems while working on the issue.

@@ -86,19 +86,15 @@ async def on_member_join(member):
     fullq = f"Talk like an angry unix administrator and make your response short. Don't state who you are. Don't say that you're angry or use the word angrily. Welcome {member.mention} to the ProLUG discord and encourage them to ask questions about linux. Make sure to state their name in the welcome message. Limit the response to two sentences."
     
     data = {
-        "model": "mistral-saba-24b",
         "messages": [
-            {
-                "role": "system",
-                "content": "You are a grumpy unix administrator who welcomes new users to a Linux discord server."
-            },
             {
                 "role": "user",
                 "content": fullq
             }
         ],
-        "temperature": 1,
-        "max_tokens": 1024,
+        "model": "mistral-saba-24b",
+        "temperature": 0.7,  # Reduced for more coherent responses
+        "max_tokens": 1000,   # Increased to allow for longer responses
         "top_p": 1,
         "stream": False,
         "stop": None
@@ -106,19 +102,16 @@ async def on_member_join(member):
 
     try:
         # Make the HTTP request
-        response = requests.post(url, headers=headers, json=data)
+        response = requests.post(url, headers=headers, json=data, timeout=10)
         response.raise_for_status()  # Raise an exception for bad status codes
 
         # Get the response content as a JSON object
         response_json = response.json()
-        print("API Response:", response_json)  # Debug print
-
-        # Extract the response content
         groq_response = response_json['choices'][0]['message']['content'].strip()
 
         # Validate the response
-        if len(groq_response) < 10:
-            raise ValueError("Response too short")
+        if len(groq_response) < 10 or not groq_response.lower().startswith("welcome"):
+            raise ValueError("Invalid response from API")
 
         await channel.send(groq_response)
         
@@ -364,7 +357,6 @@ async def on_message(message):
             
             # Set request data
             data = {
-                "model": "mistral-saba-24b",
                 "messages": [
                     {
                         "role": "system",
@@ -375,6 +367,7 @@ async def on_message(message):
                         "content": promptq
                     }
                 ],
+                "model": "mixtral-8x7b-32768",
                 "temperature": 1,
                 "max_tokens": 1024,
                 "top_p": 1,
@@ -382,33 +375,17 @@ async def on_message(message):
                 "stop": None
             }
 
-            try:
-                # Make the HTTP request
-                response = requests.post(url, headers=headers, json=data)
-                response.raise_for_status()
+            # Make the HTTP request
+            response = requests.post(url, headers=headers, data=json.dumps(data))
 
-                # Get the response content as a JSON object
-                response_json = response.json()
-                print("API Response:", response_json)  # Debug print
+            # Get the response content as a JSON object
+            response_json = response.json()
+            print(response_json)
+            groq_response= (response_json['choices'][0]['message']['content'])
+            await message.channel.send(groq_response)
 
-                # Extract the response content
-                groq_response = response_json['choices'][0]['message']['content']
-
-                await message.channel.send(groq_response)
-
-                # Increment ask count
-                increment_count("ask")
-
-            except requests.exceptions.RequestException as e:
-                print(f"API Request Error: {e}")
-                await message.channel.send("Sorry, I encountered an error processing your request.")
-            except KeyError as e:
-                print(f"Response Parsing Error: {e}")
-                print(f"Response JSON: {response_json}")
-                await message.channel.send("Sorry, I encountered an error processing the response.")
-            except Exception as e:
-                print(f"Unexpected Error: {e}")
-                await message.channel.send("An unexpected error occurred.")
+            # Increment ask count
+            increment_count("ask")
 
         ### Bot will chat with users ###
         elif "!chat" in user_message.lower() and username.lower() != "fishermanguybot":
@@ -417,7 +394,6 @@ async def on_message(message):
             
             # Set request data
             data = {
-                "model": "mistral-saba-24b",
                 "messages": [
                     {
                         "role": "system",
@@ -428,6 +404,7 @@ async def on_message(message):
                         "content": promptq
                     }
                 ],
+                "model": "mixtral-8x7b-32768",
                 "temperature": 1,
                 "max_tokens": 1024,
                 "top_p": 1,
@@ -435,30 +412,13 @@ async def on_message(message):
                 "stop": None
             }
 
-            try:
-                # Make the HTTP request
-                response = requests.post(url, headers=headers, json=data)
-                response.raise_for_status()
+            # Make the HTTP request
+            response = requests.post(url, headers=headers, data=json.dumps(data))
 
-                # Get the response content as a JSON object
-                response_json = response.json()
-                print("API Response:", response_json)  # Debug print
-
-                # Extract the response content
-                groq_response = response_json['choices'][0]['message']['content']
-
-                await message.channel.send(groq_response)
-
-            except requests.exceptions.RequestException as e:
-                print(f"API Request Error: {e}")
-                await message.channel.send("Sorry, I encountered an error processing your request.")
-            except KeyError as e:
-                print(f"Response Parsing Error: {e}")
-                print(f"Response JSON: {response_json}")
-                await message.channel.send("Sorry, I encountered an error processing the response.")
-            except Exception as e:
-                print(f"Unexpected Error: {e}")
-                await message.channel.send("An unexpected error occurred.")
+            # Get the response content as a JSON object
+            response_json = response.json()
+            groq_response= (response_json['choices'][0]['message']['content'])
+            await message.channel.send(groq_response)
 
         ### Stupid message for myself ###
         elif user_message.lower() == "rise my minion!" and username.lower() == "fishermanguybro":
