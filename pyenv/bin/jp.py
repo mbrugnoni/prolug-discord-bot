@@ -1,4 +1,4 @@
-#!/home/mbrugnon/repos/prolug-discord-bot/pyenv/bin/python3.10
+#!/home/mbrugnon/repos/prolug-discord-bot/pyenv/bin/python3
 
 import sys
 import json

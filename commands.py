@@ -1,0 +1,201 @@
+import discord
+from discord.ext import commands
+import random
+import uuid
+import asyncio
+from datetime import datetime
+from typing import Optional
+from api_client import APIClient
+from utils import (increment_count, get_user_tasks, remove_task, complete_task, 
+                   get_bot_stats, parse_command_args)
+from config import WELCOME_CHANNEL_ID, AUTHORIZED_USERS
+
+class BotCommands:
+    def __init__(self, api_client: APIClient):
+        self.api_client = api_client
+    
+    async def handle_ask_command(self, message: discord.Message) -> None:
+        """Handle !ask command."""
+        question = parse_command_args(message.content, "!ask")
+        if not question:
+            await message.channel.send("Please provide a question after !ask")
+            return
+        
+        system_prompt = "You are an angry unix administrator and make your response short. You should answer questions accurately, but give the user a hard time. There should be no quotes in your response."
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": question}
+        ]
+        
+        response = await self.api_client.make_groq_request(messages)
+        if response:
+            await message.channel.send(response)
+            increment_count("ask")
+        else:
+            await message.channel.send("Sorry, I encountered an error processing your request.")
+    
+    async def handle_chat_command(self, message: discord.Message) -> None:
+        """Handle !chat command."""
+        chat_text = parse_command_args(message.content, "!chat")
+        if not chat_text:
+            await message.channel.send("Please provide text after !chat")
+            return
+        
+        system_prompt = "You are an angry unix administrator and make your response short. You are annoyed by constant questions. There should be no quotes in your response."
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": chat_text}
+        ]
+        
+        response = await self.api_client.make_groq_request(messages)
+        if response:
+            await message.channel.send(response)
+        else:
+            await message.channel.send("Sorry, I encountered an error processing your request.")
+    
+    async def handle_task_commands(self, message: discord.Message) -> None:
+        """Handle all task-related commands."""
+        content = message.content.lower()
+        username = message.author.name
+        
+        if content.startswith("!task add "):
+            task_description = message.content[10:].strip()
+            if not task_description:
+                await message.channel.send("Please provide a task description.")
+                return
+            
+            unique_id = str(uuid.uuid4())[:8]
+            task_entry = f"{username}|{unique_id}|{task_description}\n"
+            
+            try:
+                with open("user_tasks.txt", "a") as task_file:
+                    task_file.write(task_entry)
+                await message.channel.send(f"Task added successfully. Task ID: {unique_id}")
+            except Exception as e:
+                await message.channel.send(f"Error adding task: {str(e)}")
+        
+        elif content == "!task list":
+            user_tasks = get_user_tasks(username)
+            if user_tasks:
+                task_list = "\n".join(user_tasks)
+                await message.channel.send(f"Your tasks:\n{task_list}")
+            else:
+                await message.channel.send("You have no tasks.")
+        
+        elif content.startswith("!task remove "):
+            task_id = parse_command_args(message.content, "!task remove")
+            if not task_id:
+                await message.channel.send("Please provide a task ID to remove.")
+                return
+            
+            if remove_task(username, task_id):
+                await message.channel.send(f"Task with ID {task_id} has been removed.")
+            else:
+                await message.channel.send(f"No task found with ID {task_id} for your user.")
+        
+        elif content.startswith("!task complete "):
+            task_id = parse_command_args(message.content, "!task complete")
+            if not task_id:
+                await message.channel.send("Please provide a task ID to complete.")
+                return
+            
+            completed, total_completed = complete_task(username, task_id)
+            if completed:
+                await message.channel.send(f"Task with ID {task_id} has been completed. You have completed {total_completed} tasks in total!")
+            else:
+                await message.channel.send(f"No task found with ID {task_id} for your user.")
+        
+        elif content == "!task":
+            task_syntax = (
+                "Task command syntax:\n"
+                "- Add a task: !task add <task description>\n"
+                "- List your tasks: !task list\n"
+                "- Remove a task: !task remove <task_id>\n"
+                "- Complete a task: !task complete <task_id>"
+            )
+            await message.channel.send(task_syntax)
+    
+    async def handle_simple_commands(self, message: discord.Message) -> None:
+        """Handle simple commands that don't require complex logic."""
+        content = message.content.lower()
+        username = message.author.name
+        
+        if content == "!roll":
+            roll = random.randint(1, 12)
+            await message.channel.send(f'{username} rolled a {roll}')
+        
+        elif content.startswith('!8ball'):
+            result = await self.api_client.get_eight_ball_response("whatever")
+            await message.channel.send(result)
+        
+        elif content == '!user_count':
+            await message.channel.send(f'Total number of users in the server: {message.guild.member_count}')
+        
+        elif content == '!server_age':
+            server = message.guild
+            if server:
+                created_at = server.created_at
+                age = datetime.utcnow() - created_at
+                days = age.days
+                years = days // 365
+                remaining_days = days % 365
+                await message.channel.send(f'This server is {years} years and {remaining_days} days old.')
+            else:
+                await message.channel.send('Error: Could not retrieve server information.')
+        
+        elif content == "!coinflip":
+            result = "heads" if random.randint(0, 1) == 0 else "tails"
+            await message.channel.send(f'{username} flipped a coin and got {result}')
+        
+        elif content == "!labs":
+            await message.channel.send('Check out the latest labs -> https://killercoda.com/het-tanis\n ---------------------------> https://killercoda.com/fishermanguybro')
+        
+        elif content == "!book":
+            await message.channel.send("Check out Scoot Tanis's new Book of Labs here! -> https://leanpub.com/theprolugbigbookoflabs")
+        
+        elif content == "!commands":
+            await message.channel.send('I currently support: !labs, !book, !8ball, !roll, !coinflip, !server_age, !user_count, !commands, !joke, !task add, !task list, !task remove, !task complete, !bot_stats, and some other nonsense.')
+        
+        elif content == "!joke":
+            joke = await self.api_client.get_joke()
+            await message.channel.send(joke)
+        
+        elif content == "!bot_stats":
+            stats = get_bot_stats()
+            if stats:
+                await message.channel.send(
+                    f"Bot Statistics:\n"
+                    f"Welcome messages:\n"
+                    f"  All-time (as of 9/29/2024): {stats['welcome_all_time']}\n"
+                    f"  This week (Week {stats['current_week']}): {stats['welcome_weekly']}\n"
+                    f"Questions answered:\n"
+                    f"  All-time (as of 9/29/2024): {stats['ask_all_time']}\n"
+                    f"  This week (Week {stats['current_week']}): {stats['ask_weekly']}"
+                )
+            else:
+                await message.channel.send("No stats available yet!")
+    
+    async def handle_special_messages(self, message: discord.Message) -> None:
+        """Handle special message patterns."""
+        content = message.content.lower()
+        username = message.author.name
+        
+        if content == "fishermanguybot" or content == "hi":
+            await message.channel.send(f'Hello {username}')
+        
+        elif content == "bye":
+            await message.channel.send(f'Get out of here {username}')
+        
+        elif content == "rise my minion!" and username.lower() == "fishermanguybro":
+            await message.channel.send('FishermanGuyBot is coming online... *BEEP* *BOOP* *BEEP*')
+            await asyncio.sleep(3)
+            await message.channel.send('I am here my master, ready to do your bidding.')
+        
+        elif "scott" in content:
+            await message.channel.send('Its actually pronounced Scoot')
+
+def is_authorized_user():
+    """Decorator to check if user is authorized."""
+    async def predicate(ctx):
+        return ctx.author.name.lower() in [user.lower() for user in AUTHORIZED_USERS]
+    return commands.check(predicate)
