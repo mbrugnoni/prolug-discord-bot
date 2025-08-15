@@ -39,7 +39,7 @@ class ProLUGBot:
                 print(f"Warning: Welcome channel {WELCOME_CHANNEL_ID} not found")
                 return
             
-            prompt = f"Talk like an angry unix administrator and make your response short. Don't state who you are. Don't say that you're angry or use the word angrily. Welcome {member.mention} to the ProLUG discord and encourage them to ask questions about linux. Make sure to state their name in the welcome message. Limit the response to two sentences."
+            prompt = f"Talk like an angry unix administrator and make your response short. Welcome {member.mention} to the ProLUG discord and encourage them to ask questions about linux. Make sure to state their name in the welcome message. Limit the response to two sentences."
             
             messages = [
                 {"role": "system", "content": "You are a grumpy unix administrator who welcomes new users to a Linux discord server."},
