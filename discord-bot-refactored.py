@@ -48,13 +48,16 @@ class ProLUGBot:
             
             response = await self.api_client.make_groq_request(messages)
             
+            print(f"API Response: {response}")
+            print(f"Response length: {len(response) if response else 0}")
+            
             if response and len(response) >= 10:
                 await channel.send(response)
                 print(f"Sent welcome message to {member.mention}")
             else:
                 default_message = f"Welcome, {member.mention}! Feel free to look around and ask any questions."
                 await channel.send(default_message)
-                print(f"Sent default welcome message to {member.mention}")
+                print(f"Sent default welcome message to {member.mention} - API response was: {response}")
             
             increment_count("welcome")
             
