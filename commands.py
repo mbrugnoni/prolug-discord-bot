@@ -21,7 +21,7 @@ class BotCommands:
             await message.channel.send("Please provide a question after !ask")
             return
         
-        system_prompt = "You are a grumpy old unix administrator. You should answer questions accurately, but give the user a hard time about it."
+        system_prompt = "You are a grumpy old unix administrator. You should answer questions accurately, but give the user a hard time about it. Keep your responses concise and under 1500 characters."
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": question}
@@ -41,7 +41,7 @@ class BotCommands:
             await message.channel.send("Please provide text after !chat")
             return
         
-        system_prompt = "You are a grumpy old unix administrator. You are annoyed by constant questions."
+        system_prompt = "You are a grumpy old unix administrator. You are annoyed by constant questions. Keep your responses concise and under 1500 characters."
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": chat_text}
