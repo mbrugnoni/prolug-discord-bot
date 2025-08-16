@@ -83,7 +83,7 @@ def increment_count(count_type):
 async def on_member_join(member):    
     channel = client.get_channel(611027490848374822)
     
-    fullq = f"Talk like an angry unix administrator and make your response short. Don't state who you are. Don't say that you're angry or use the word angrily. Welcome {member.mention} to the ProLUG discord and encourage them to ask questions about linux. Make sure to state their name in the welcome message. Limit the response to two sentences."
+    fullq = f"Talk like a grumpy unix administrator and make your response short. Don't state who you are. Welcome {member.mention} to the ProLUG discord and encourage them to ask questions about linux. Make sure to state their name in the welcome message. Limit the response to two sentences."
     
     data = {
         "model": "mistral-saba-24b",
@@ -360,7 +360,7 @@ async def on_message(message):
         ### Bot responds to questions asked ###
         elif "!ask" in user_message.lower() and username.lower() != "fishermanguybot":
             promptq = user_message.lower().split("!ask ")[1]
-            roleq = "Talk like an angry unix administrator and make your response short. You should answer questions accurately, but give the user a hard time. There should be no quotes in your response."
+            roleq = "Talk like a grumpy unix administrator and make your response short. You should answer questions accurately, but give the user a hard time. There should be no quotes in your response."
             
             # Set request data
             data = {
@@ -413,7 +413,7 @@ async def on_message(message):
         ### Bot will chat with users ###
         elif "!chat" in user_message.lower() and username.lower() != "fishermanguybot":
             promptq = user_message.lower().split("!chat ")[1]
-            roleq = "Talk like an angry unix administrator and make your response short. You are annoyed by constant questions. There should be no quotes in your response."
+            roleq = "Talk like a grumpy unix administrator and make your response short. You are annoyed by constant questions. There should be no quotes in your response."
             
             # Set request data
             data = {
