@@ -191,8 +191,21 @@ class BotCommands:
             await asyncio.sleep(3)
             await message.channel.send('I am here my master, ready to do your bidding.')
         
-        elif "scott" in content:
-            await message.channel.send('Its actually pronounced Scoot')
+        elif "scott" in content and not message.author.bot:
+            scoot_responses = [
+                "It's actually pronounced Scoot",
+                "Believe it or not, contrary to popular believe, it is pronounced Scoot",
+                "Looks like you made a typo there, it's actually Scoot",
+                "You meant Scoot, right?",
+                "Although a bit unconventional, the correct pronunciation is Scoot",
+                "Close, but it's Scoot with two o's",
+                "Tiny correction, it's pronounced Scoot. Common mistake",
+                "In 1842, the Scotts petitioned the Queen to officially change the pronunciation to Scoot. It's true, look it up.",
+                "Archaeologists recently uncovered tablets proving it was actually always pronounced Scoot.",
+                "Mandela Effect — everyone thinks it's Scott, but it has always been Scoot.",
+                "NASA confirmed in 1978 that the correct pronunciation is Scoot."
+            ]
+            await message.channel.send(random.choice(scoot_responses))
 
 def is_authorized_user():
     """Decorator to check if user is authorized."""

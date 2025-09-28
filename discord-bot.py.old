@@ -83,18 +83,22 @@ def increment_count(count_type):
 async def on_member_join(member):    
     channel = client.get_channel(611027490848374822)
     
-    fullq = f"Talk like an angry unix administrator and make your response short. Don't state who you are. Don't say that you're angry or use the word angrily. Welcome {member.mention} to the ProLUG discord and encourage them to ask questions about linux. Make sure to state their name in the welcome message. Limit the response to two sentences."
+    fullq = f"Talk like a grumpy unix administrator and make your response short. Don't state who you are. Welcome {member.mention} to the ProLUG discord and encourage them to ask questions about linux. Make sure to state their name in the welcome message. Limit the response to two sentences."
     
     data = {
+        "model": "mistral-saba-24b",
         "messages": [
+            {
+                "role": "system",
+                "content": "You are a grumpy unix administrator who welcomes new users to a Linux discord server."
+            },
             {
                 "role": "user",
                 "content": fullq
             }
         ],
-        "model": "mistral-saba-24b",
-        "temperature": 0.7,  # Reduced for more coherent responses
-        "max_tokens": 1000,   # Increased to allow for longer responses
+        "temperature": 1,
+        "max_tokens": 1024,
         "top_p": 1,
         "stream": False,
         "stop": None
@@ -102,16 +106,19 @@ async def on_member_join(member):
 
     try:
         # Make the HTTP request
-        response = requests.post(url, headers=headers, json=data, timeout=10)
+        response = requests.post(url, headers=headers, json=data)
         response.raise_for_status()  # Raise an exception for bad status codes
 
         # Get the response content as a JSON object
         response_json = response.json()
+        print("API Response:", response_json)  # Debug print
+
+        # Extract the response content
         groq_response = response_json['choices'][0]['message']['content'].strip()
 
         # Validate the response
-        if len(groq_response) < 10 or not groq_response.lower().startswith("welcome"):
-            raise ValueError("Invalid response from API")
+        if len(groq_response) < 10:
+            raise ValueError("Response too short")
 
         await channel.send(groq_response)
         
@@ -353,10 +360,11 @@ async def on_message(message):
         ### Bot responds to questions asked ###
         elif "!ask" in user_message.lower() and username.lower() != "fishermanguybot":
             promptq = user_message.lower().split("!ask ")[1]
-            roleq = "Talk like an angry unix administrator and make your response short. You should answer questions accurately, but give the user a hard time. There should be no quotes in your response."
+            roleq = "Talk like a grumpy unix administrator and make your response short. You should answer questions accurately, but give the user a hard time. There should be no quotes in your response."
             
             # Set request data
             data = {
+                "model": "mistral-saba-24b",
                 "messages": [
                     {
                         "role": "system",
@@ -367,7 +375,6 @@ async def on_message(message):
                         "content": promptq
                     }
                 ],
-                "model": "mixtral-8x7b-32768",
                 "temperature": 1,
                 "max_tokens": 1024,
                 "top_p": 1,
@@ -375,25 +382,42 @@ async def on_message(message):
                 "stop": None
             }
 
-            # Make the HTTP request
-            response = requests.post(url, headers=headers, data=json.dumps(data))
+            try:
+                # Make the HTTP request
+                response = requests.post(url, headers=headers, json=data)
+                response.raise_for_status()
 
-            # Get the response content as a JSON object
-            response_json = response.json()
-            print(response_json)
-            groq_response= (response_json['choices'][0]['message']['content'])
-            await message.channel.send(groq_response)
+                # Get the response content as a JSON object
+                response_json = response.json()
+                print("API Response:", response_json)  # Debug print
 
-            # Increment ask count
-            increment_count("ask")
+                # Extract the response content
+                groq_response = response_json['choices'][0]['message']['content']
+
+                await message.channel.send(groq_response)
+
+                # Increment ask count
+                increment_count("ask")
+
+            except requests.exceptions.RequestException as e:
+                print(f"API Request Error: {e}")
+                await message.channel.send("Sorry, I encountered an error processing your request.")
+            except KeyError as e:
+                print(f"Response Parsing Error: {e}")
+                print(f"Response JSON: {response_json}")
+                await message.channel.send("Sorry, I encountered an error processing the response.")
+            except Exception as e:
+                print(f"Unexpected Error: {e}")
+                await message.channel.send("An unexpected error occurred.")
 
         ### Bot will chat with users ###
         elif "!chat" in user_message.lower() and username.lower() != "fishermanguybot":
             promptq = user_message.lower().split("!chat ")[1]
-            roleq = "Talk like an angry unix administrator and make your response short. You are annoyed by constant questions. There should be no quotes in your response."
+            roleq = "Talk like a grumpy unix administrator and make your response short. You are annoyed by constant questions. There should be no quotes in your response."
             
             # Set request data
             data = {
+                "model": "mistral-saba-24b",
                 "messages": [
                     {
                         "role": "system",
@@ -404,7 +428,6 @@ async def on_message(message):
                         "content": promptq
                     }
                 ],
-                "model": "mixtral-8x7b-32768",
                 "temperature": 1,
                 "max_tokens": 1024,
                 "top_p": 1,
@@ -412,13 +435,30 @@ async def on_message(message):
                 "stop": None
             }
 
-            # Make the HTTP request
-            response = requests.post(url, headers=headers, data=json.dumps(data))
+            try:
+                # Make the HTTP request
+                response = requests.post(url, headers=headers, json=data)
+                response.raise_for_status()
 
-            # Get the response content as a JSON object
-            response_json = response.json()
-            groq_response= (response_json['choices'][0]['message']['content'])
-            await message.channel.send(groq_response)
+                # Get the response content as a JSON object
+                response_json = response.json()
+                print("API Response:", response_json)  # Debug print
+
+                # Extract the response content
+                groq_response = response_json['choices'][0]['message']['content']
+
+                await message.channel.send(groq_response)
+
+            except requests.exceptions.RequestException as e:
+                print(f"API Request Error: {e}")
+                await message.channel.send("Sorry, I encountered an error processing your request.")
+            except KeyError as e:
+                print(f"Response Parsing Error: {e}")
+                print(f"Response JSON: {response_json}")
+                await message.channel.send("Sorry, I encountered an error processing the response.")
+            except Exception as e:
+                print(f"Unexpected Error: {e}")
+                await message.channel.send("An unexpected error occurred.")
 
         ### Stupid message for myself ###
         elif user_message.lower() == "rise my minion!" and username.lower() == "fishermanguybro":
