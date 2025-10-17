@@ -3,6 +3,7 @@ from discord.ext import commands
 import random
 import uuid
 import asyncio
+import subprocess
 from datetime import datetime
 from typing import Optional
 from api_client import APIClient
@@ -206,6 +207,86 @@ class BotCommands:
                 "NASA confirmed in 1978 that the correct pronunciation is Scoot."
             ]
             await message.channel.send(random.choice(scoot_responses))
+    
+    async def handle_addkey_command(self, message: discord.Message) -> None:
+        """Handle !addkey command to add SSH keys to the lab environment."""
+        if message.channel.name != "prolug_lab_environment":
+            return
+        
+        ssh_key = parse_command_args(message.content, "!addkey")
+        if not ssh_key:
+            await message.channel.send("Please provide your SSH public key after !addkey")
+            return
+        
+        username = message.author.name
+        comment = f"# Owner: {username}"
+        
+        try:
+            check_command = f"sudo grep -q '# Owner: {username}' /home/prolug/.ssh/authorized_keys"
+            check_result = subprocess.run(
+                ["ssh", "fishermanguybro@prolug.asuscomm.com", check_command],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            
+            if check_result.returncode == 0:
+                await message.channel.send(f"{username}, you already have an existing key in the authorized_keys file.")
+                return
+            
+            ssh_command = f"echo '{comment}\n{ssh_key}' | sudo tee -a /home/prolug/.ssh/authorized_keys > /dev/null"
+            result = subprocess.run(
+                ["ssh", "fishermanguybro@prolug.asuscomm.com", ssh_command],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            
+            if result.returncode == 0:
+                await message.channel.send(f"SSH key added successfully for {username}!")
+            else:
+                await message.channel.send(f"Error adding SSH key: {result.stderr}")
+        except subprocess.TimeoutExpired:
+            await message.channel.send("SSH connection timed out.")
+        except Exception as e:
+            await message.channel.send(f"Error: {str(e)}")
+    
+    async def handle_removekey_command(self, message: discord.Message) -> None:
+        """Handle !removekey command to remove SSH keys from the lab environment."""
+        if message.channel.name != "prolug_lab_environment":
+            return
+        
+        username = message.author.name
+        
+        try:
+            check_command = f"sudo grep -q '# Owner: {username}' /home/prolug/.ssh/authorized_keys"
+            check_result = subprocess.run(
+                ["ssh", "fishermanguybro@prolug.asuscomm.com", check_command],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            
+            if check_result.returncode != 0:
+                await message.channel.send(f"{username}, you don't have a key in the authorized_keys file.")
+                return
+            
+            remove_command = f"sudo sed -i '/# Owner: {username}/{{N;d;}}' /home/prolug/.ssh/authorized_keys"
+            result = subprocess.run(
+                ["ssh", "fishermanguybro@prolug.asuscomm.com", remove_command],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            
+            if result.returncode == 0:
+                await message.channel.send(f"SSH key removed successfully for {username}!")
+            else:
+                await message.channel.send(f"Error removing SSH key: {result.stderr}")
+        except subprocess.TimeoutExpired:
+            await message.channel.send("SSH connection timed out.")
+        except Exception as e:
+            await message.channel.send(f"Error: {str(e)}")
 
 def is_authorized_user():
     """Decorator to check if user is authorized."""
