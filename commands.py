@@ -155,7 +155,7 @@ class BotCommands:
             await message.channel.send("Check out Scoot Tanis's new Book of Labs here! -> https://leanpub.com/theprolugbigbookoflabs")
         
         elif content == "!commands":
-            await message.channel.send('I currently support: !labs, !book, !8ball, !roll, !coinflip, !server_age, !user_count, !commands, !joke, !task add, !task list, !task remove, !task complete, !bot_stats, and some other nonsense.')
+            await message.channel.send('I currently support: !ask, !chat, !labs, !book, !8ball, !roll, !coinflip, !server_age, !user_count, !commands, !joke, !task add, !task list, !task remove, !task complete, !bot_stats, !export_thread, !addkey, !removekey, and some other nonsense.')
         
         elif content == "!joke":
             joke = await self.api_client.get_joke()

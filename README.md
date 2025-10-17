@@ -18,6 +18,7 @@ This Discord bot is designed to enhance the ProLUG server experience by providin
 - Lab and Resource Links: Provides quick access to learning resources
 - Bot Statistics: Displays welcome message and question answering stats
 - Thread Export: Allows authorized users to export and summarize thread content
+- SSH Key Management: Add and remove SSH public keys for lab environment access
 
 ## Installation
 
@@ -72,15 +73,18 @@ python discord-bot.py
 - `!task complete <task_id>`: Mark a task as completed
 - `!bot_stats`: Display bot statistics for welcome messages and questions answered
 - `!export_thread <thread_id>`: Export and summarize a thread (authorized users only)
+- `!addkey <public_key>`: Add your SSH public key to the lab environment (prolug_lab_environment channel only)
+- `!removekey`: Remove your SSH public key from the lab environment (prolug_lab_environment channel only)
 
 ## Upcoming Features
 
 - [ ] Add sentiment analysis to chat functionality
 - [x] Thread export and summarization feature
+- [x] SSH key management for lab environment
 
 Legend:
 - [ ] : Planned
-- [x] : In-progress
+- [x] : Completed
 
 ## Contributing
 
