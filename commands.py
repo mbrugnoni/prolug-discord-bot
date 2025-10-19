@@ -261,9 +261,8 @@ class BotCommands:
         username = message.author.name
         
         try:
-            check_command = f"sudo grep -q '# Owner: {username}' /home/prolug/.ssh/authorized_keys"
             check_result = subprocess.run(
-                ["ssh", "fishermanguybro@prolug.asuscomm.com", check_command],
+                ["ssh", "fishermanguybro@prolug.asuscomm.com", "sudo", "grep", "-q", f"# Owner: {username}", "/home/prolug/.ssh/authorized_keys"],
                 capture_output=True,
                 text=True,
                 timeout=10
@@ -273,9 +272,8 @@ class BotCommands:
                 await message.channel.send(f"{username}, you don't have a key in the authorized_keys file.")
                 return
             
-            remove_command = f"sudo sed -i '/# Owner: {username}/{{N;d;}}' /home/prolug/.ssh/authorized_keys"
             result = subprocess.run(
-                ["ssh", "fishermanguybro@prolug.asuscomm.com", remove_command],
+                ["ssh", "fishermanguybro@prolug.asuscomm.com", "sudo", "sed", "-i", f"/# Owner: {username}/{{N;d;}}", "/home/prolug/.ssh/authorized_keys"],
                 capture_output=True,
                 text=True,
                 timeout=10
