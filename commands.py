@@ -4,6 +4,7 @@ import random
 import uuid
 import asyncio
 import subprocess
+import shlex
 from datetime import datetime
 from typing import Optional
 from api_client import APIClient
@@ -222,9 +223,8 @@ class BotCommands:
         comment = f"# Owner: {username}"
         
         try:
-            check_command = f"sudo grep -q '# Owner: {username}' /home/prolug/.ssh/authorized_keys"
             check_result = subprocess.run(
-                ["ssh", "fishermanguybro@prolug.asuscomm.com", check_command],
+                ["ssh", "fishermanguybro@prolug.asuscomm.com", "sudo", "grep", "-q", f"# Owner: {username}", "/home/prolug/.ssh/authorized_keys"],
                 capture_output=True,
                 text=True,
                 timeout=10
@@ -234,9 +234,9 @@ class BotCommands:
                 await message.channel.send(f"{username}, you already have an existing key in the authorized_keys file.")
                 return
             
-            ssh_command = f"echo '{comment}\n{ssh_key}' | sudo tee -a /home/prolug/.ssh/authorized_keys > /dev/null"
             result = subprocess.run(
-                ["ssh", "fishermanguybro@prolug.asuscomm.com", ssh_command],
+                ["ssh", "fishermanguybro@prolug.asuscomm.com", "sudo", "tee", "-a", "/home/prolug/.ssh/authorized_keys"],
+                input=f"{comment}\n{ssh_key}\n",
                 capture_output=True,
                 text=True,
                 timeout=10
@@ -245,11 +245,13 @@ class BotCommands:
             if result.returncode == 0:
                 await message.channel.send(f"SSH key added successfully for {username}!")
             else:
-                await message.channel.send(f"Error adding SSH key: {result.stderr}")
+                await message.channel.send("Error adding SSH key. Please try again later.")
         except subprocess.TimeoutExpired:
-            await message.channel.send("SSH connection timed out.")
-        except Exception as e:
-            await message.channel.send(f"Error: {str(e)}")
+            await message.channel.send("SSH connection timed out. Please try again later.")
+        except (FileNotFoundError, PermissionError):
+            await message.channel.send("SSH command failed. Please contact an administrator.")
+        except Exception:
+            await message.channel.send("An unexpected error occurred. Please try again later.")
     
     async def handle_removekey_command(self, message: discord.Message) -> None:
         """Handle !removekey command to remove SSH keys from the lab environment."""
@@ -282,11 +284,13 @@ class BotCommands:
             if result.returncode == 0:
                 await message.channel.send(f"SSH key removed successfully for {username}!")
             else:
-                await message.channel.send(f"Error removing SSH key: {result.stderr}")
+                await message.channel.send("Error removing SSH key. Please try again later.")
         except subprocess.TimeoutExpired:
-            await message.channel.send("SSH connection timed out.")
-        except Exception as e:
-            await message.channel.send(f"Error: {str(e)}")
+            await message.channel.send("SSH connection timed out. Please try again later.")
+        except (FileNotFoundError, PermissionError):
+            await message.channel.send("SSH command failed. Please contact an administrator.")
+        except Exception:
+            await message.channel.send("An unexpected error occurred. Please try again later.")
 
 def is_authorized_user():
     """Decorator to check if user is authorized."""

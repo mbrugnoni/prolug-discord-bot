@@ -13,6 +13,7 @@ class APIClient:
             "Authorization": f"Bearer {perplexity_key}",
             "Content-Type": "application/json"
         }
+        self.session = None
     
     async def make_groq_request(self, messages: list, model: str = "openai/gpt-oss-120b") -> Optional[str]:
         """Make async request to Groq API."""
@@ -28,8 +29,9 @@ class APIClient:
         }
         
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(GROQ_URL, headers=self.groq_headers, json=data, timeout=30) as response:
+            if not self.session:
+                self.session = aiohttp.ClientSession()
+            async with self.session.post(GROQ_URL, headers=self.groq_headers, json=data, timeout=30) as response:
                     response.raise_for_status()
                     response_json = await response.json()
                     return response_json['choices'][0]['message']['content']
@@ -57,8 +59,9 @@ class APIClient:
         }
         
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(PERPLEXITY_URL, headers=self.perplexity_headers, json=payload, timeout=60) as response:
+            if not self.session:
+                self.session = aiohttp.ClientSession()
+            async with self.session.post(PERPLEXITY_URL, headers=self.perplexity_headers, json=payload, timeout=60) as response:
                     response.raise_for_status()
                     response_json = await response.json()
                     return response_json['choices'][0]['message']['content']
@@ -71,8 +74,9 @@ class APIClient:
         headers = {"Accept": "application/json"}
         
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(JOKE_API_URL, headers=headers, timeout=10) as response:
+            if not self.session:
+                self.session = aiohttp.ClientSession()
+            async with self.session.get(JOKE_API_URL, headers=headers, timeout=10) as response:
                     if response.status == 200:
                         joke_data = await response.json()
                         return joke_data['joke']
@@ -87,13 +91,14 @@ class APIClient:
         params = {"question": question}
         
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(EIGHTBALL_API_URL, params=params, timeout=10) as response:
+            if not self.session:
+                self.session = aiohttp.ClientSession()
+            async with self.session.get(EIGHTBALL_API_URL, params=params, timeout=10) as response:
                     if response.status == 200:
                         result = await response.json()
                         return result.get('reading', 'Magic 8-ball is unclear')
                     else:
-                        return f"Error: {response.status}"
+                        return "The magic 8-ball is not responding."
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
             print(f"8-ball API Error: {e}")
             return "The magic 8-ball is not responding."
