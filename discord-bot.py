@@ -9,12 +9,14 @@ from config import Config, WELCOME_CHANNEL_ID
 from api_client import APIClient
 from commands import BotCommands, is_authorized_user
 from utils import increment_count
+from chat_logger import ChatLogger
 
 class ProLUGBot:
     def __init__(self):
         self.config = Config()
         self.api_client = APIClient(self.config.groq_key, self.config.perplexity_api_key)
         self.bot_commands = BotCommands(self.api_client)
+        self.chat_logger = ChatLogger()
         
         # Setup Discord bot
         intents = discord.Intents.default()
@@ -74,6 +76,15 @@ class ProLUGBot:
             username = message.author.name
             channel_name = message.channel.name
             content = message.content
+            
+            # Log the message
+            self.chat_logger.log_message(
+                user_id=message.author.id,
+                username=username,
+                channel_id=message.channel.id,
+                channel_name=channel_name,
+                message_content=content
+            )
             
             print(f'Message "{content}" by {username} on {channel_name}')
             

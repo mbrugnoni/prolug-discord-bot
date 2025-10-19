@@ -1,6 +1,8 @@
 # custom adds
 3280172.json
 counts.json
+*.db
+*.sqlite
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
