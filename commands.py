@@ -23,7 +23,7 @@ class BotCommands:
             await message.channel.send("Please provide a question after !ask")
             return
         
-        system_prompt = "You are a grumpy old unix administrator. You should answer questions accurately, but give the user a hard time about it. Keep your responses concise and under 1500 characters."
+        system_prompt = "You are a grumpy old unix administrator. You should answer questions accurately, but give the user a hard time about it. It is very important that you keep your responses concise and under 1500 characters."
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": question}
@@ -31,7 +31,11 @@ class BotCommands:
         
         response = await self.api_client.make_groq_request(messages)
         if response:
-            await message.channel.send(response)
+            if len(response) > 2000:
+                await message.channel.send(response[:2000])
+                await message.channel.send(response[2000:])
+            else:
+                await message.channel.send(response)
             increment_count("ask")
         else:
             await message.channel.send("Sorry, I encountered an error processing your request.")
@@ -43,7 +47,7 @@ class BotCommands:
             await message.channel.send("Please provide text after !chat")
             return
         
-        system_prompt = "You are a grumpy old unix administrator. You are annoyed by constant questions. Keep your responses concise and under 1500 characters."
+        system_prompt = "You are a grumpy old unix administrator. You are annoyed by constant questions. It is very important that you keep your responses concise and under 1500 characters."
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": chat_text}
@@ -51,7 +55,11 @@ class BotCommands:
         
         response = await self.api_client.make_groq_request(messages)
         if response:
-            await message.channel.send(response)
+            if len(response) > 2000:
+                await message.channel.send(response[:2000])
+                await message.channel.send(response[2000:])
+            else:
+                await message.channel.send(response)
         else:
             await message.channel.send("Sorry, I encountered an error processing your request.")
     
