@@ -152,7 +152,9 @@ def get_bot_stats() -> Optional[Dict]:
 
 def parse_command_args(message: str, command: str) -> Optional[str]:
     """Safely parse command arguments from message."""
-    parts = message.lower().split(f"{command} ", 1)
-    if len(parts) < 2:
+    # Use case-insensitive comparison for command, but preserve args case
+    if not message.lower().startswith(f"{command.lower()} "):
         return None
-    return parts[1].strip()
+    # Extract args from original message to preserve case
+    args = message[len(command):].strip()
+    return args if args else None

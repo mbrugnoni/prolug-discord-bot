@@ -221,27 +221,32 @@ class BotCommands:
         """Handle !addkey command to add SSH keys to the lab environment."""
         if message.channel.name != "prolug_lab_environment":
             return
-        
+
         ssh_key = parse_command_args(message.content, "!addkey")
         if not ssh_key:
             await message.channel.send("Please provide your SSH public key after !addkey")
             return
-        
+
         username = message.author.name
         comment = f"# Owner: {username}"
-        
+
         try:
+            # Check if user already has a key - use grep -F for literal string matching
+            # Need to pass the remote command as a single string to ssh
             check_result = subprocess.run(
-                ["ssh", "fishermanguybro@prolug.asuscomm.com", "sudo", "grep", "-q", f"# Owner: {username}", "/home/prolug/.ssh/authorized_keys"],
+                ["ssh", "fishermanguybro@prolug.asuscomm.com",
+                 f"sudo grep -iF '# Owner: {username}' /home/prolug/.ssh/authorized_keys"],
                 capture_output=True,
                 text=True,
                 timeout=10
             )
-            
+
+            # grep returns 0 if found, non-zero if not found
             if check_result.returncode == 0:
                 await message.channel.send(f"{username}, you already have an existing key in the authorized_keys file.")
                 return
-            
+
+            # Add the new key
             result = subprocess.run(
                 ["ssh", "fishermanguybro@prolug.asuscomm.com", "sudo", "tee", "-a", "/home/prolug/.ssh/authorized_keys"],
                 input=f"{comment}\n{ssh_key}\n",
@@ -249,7 +254,7 @@ class BotCommands:
                 text=True,
                 timeout=10
             )
-            
+
             if result.returncode == 0:
                 await message.channel.send(f"SSH key added successfully for {username}!")
             else:
@@ -265,32 +270,37 @@ class BotCommands:
         """Handle !removekey command to remove SSH keys from the lab environment."""
         if message.channel.name != "prolug_lab_environment":
             return
-        
+
         username = message.author.name
-        
+
         try:
+            # Check if user has a key - pass remote command as single string
             check_result = subprocess.run(
-                ["ssh", "fishermanguybro@prolug.asuscomm.com", "sudo", "grep", "-q", f"# Owner: {username}", "/home/prolug/.ssh/authorized_keys"],
+                ["ssh", "fishermanguybro@prolug.asuscomm.com",
+                 f"sudo grep -iF '# Owner: {username}' /home/prolug/.ssh/authorized_keys"],
                 capture_output=True,
                 text=True,
                 timeout=10
             )
-            
+
             if check_result.returncode != 0:
                 await message.channel.send(f"{username}, you don't have a key in the authorized_keys file.")
                 return
-            
+
+            # Remove the key using sed with case-insensitive matching
+            # The sed command finds the comment line and deletes it plus the next line
             result = subprocess.run(
-                ["ssh", "fishermanguybro@prolug.asuscomm.com", "sudo", "sed", "-i", f"/# Owner: {username}/{{N;d;}}", "/home/prolug/.ssh/authorized_keys"],
+                ["ssh", "fishermanguybro@prolug.asuscomm.com",
+                 f"sudo sed -i '/# Owner: {username}/I{{N;d;}}' /home/prolug/.ssh/authorized_keys"],
                 capture_output=True,
                 text=True,
                 timeout=10
             )
-            
+
             if result.returncode == 0:
                 await message.channel.send(f"SSH key removed successfully for {username}!")
             else:
-                await message.channel.send("Error removing SSH key. Please try again later.")
+                await message.channel.send(f"Error removing SSH key. Please try again later.")
         except subprocess.TimeoutExpired:
             await message.channel.send("SSH connection timed out. Please try again later.")
         except (FileNotFoundError, PermissionError):
