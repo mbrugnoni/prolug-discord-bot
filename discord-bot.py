@@ -1,8 +1,9 @@
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 import asyncio
 import uuid
-from datetime import datetime
+from datetime import datetime, time
+import pytz
 
 # Local imports
 from config import Config, WELCOME_CHANNEL_ID
@@ -10,6 +11,7 @@ from api_client import APIClient
 from commands import BotCommands, is_authorized_user
 from utils import increment_count
 from chat_logger import ChatLogger
+from weekly_report import WeeklyReport
 
 class ProLUGBot:
     def __init__(self):
@@ -17,13 +19,15 @@ class ProLUGBot:
         self.api_client = APIClient(self.config.groq_key, self.config.perplexity_api_key)
         self.bot_commands = BotCommands(self.api_client)
         self.chat_logger = ChatLogger()
-        
+        self.weekly_report = WeeklyReport()
+
         # Setup Discord bot
         intents = discord.Intents.default()
         intents.members = True
         intents.message_content = True
         self.client = commands.Bot(command_prefix='!', intents=intents)
-        
+
+        self._setup_scheduled_tasks()
         self._setup_events()
         self._setup_commands()
     
@@ -33,6 +37,9 @@ class ProLUGBot:
         @self.client.event
         async def on_ready():
             print(f"Logged in as a bot {self.client.user}")
+            # Start scheduled tasks after bot is ready
+            if not self.send_weekly_report.is_running():
+                self.send_weekly_report.start()
         
         @self.client.event
         async def on_member_join(member):
@@ -117,36 +124,36 @@ class ProLUGBot:
             """Export and summarize a thread (authorized users only)."""
             try:
                 thread = await self.client.fetch_channel(thread_id)
-                
+
                 if not isinstance(thread, discord.Thread):
                     await ctx.send("The provided ID does not belong to a thread.")
                     return
-                
+
                 # Fetch messages
                 messages = []
                 async for msg in thread.history(limit=None, oldest_first=True):
                     messages.append(f"{msg.author.name}: {msg.content}")
-                
+
                 thread_content = "\n".join(messages)
                 prompt = f"Summarize the important information and key terms from the following text:\n\n{thread_content}\n\nSummary:"
-                
+
                 summary_messages = [
                     {"role": "system", "content": "You are a helpful assistant that summarizes Discord thread conversations. Be precise and concise."},
                     {"role": "user", "content": prompt}
                 ]
-                
+
                 summary = await self.api_client.make_perplexity_request(summary_messages)
-                
+
                 if summary:
                     # Split into chunks
                     chunks = [summary[i:i+1900] for i in range(0, len(summary), 1900)]
-                    
+
                     await ctx.send(f"Thread Summary for thread ID {thread_id}:")
                     for i, chunk in enumerate(chunks, 1):
                         await ctx.send(f"Part {i}/{len(chunks)}:\n\n{chunk}")
                 else:
                     await ctx.send("Failed to generate summary.")
-                    
+
             except discord.NotFound:
                 await ctx.send("Thread not found. Please check the thread ID.")
             except discord.Forbidden:
@@ -154,11 +161,36 @@ class ProLUGBot:
             except Exception as e:
                 await ctx.send(f"An unexpected error occurred: {str(e)}")
                 print(f"Export thread error: {e}")
+
+        @self.client.command()
+        @is_authorized_user()
+        async def weekly_report(ctx):
+            """Generate and send the weekly report (authorized users only)."""
+            await ctx.send("Generating weekly report...")
+
+            # Get statistics
+            stats = self.weekly_report.get_weekly_stats()
+
+            if stats:
+                # Use AI to get better topic analysis if there are messages
+                if stats['total_messages'] > 0 and stats['all_messages']:
+                    ai_topic = await self.weekly_report.generate_report_with_ai(
+                        self.api_client,
+                        stats['all_messages']
+                    )
+                    if ai_topic:
+                        stats['most_discussed_topic'] = ai_topic
+
+                # Format the report
+                report = self.weekly_report.format_report(stats)
+                await ctx.send(report)
+            else:
+                await ctx.send("Failed to generate weekly report statistics.")
     
     async def _route_message(self, message: discord.Message) -> None:
         """Route messages to appropriate command handlers."""
         content = message.content.lower()
-        
+
         # Command routing
         if content.startswith("!ask "):
             await self.bot_commands.handle_ask_command(message)
@@ -170,11 +202,65 @@ class ProLUGBot:
             await self.bot_commands.handle_addkey_command(message)
         elif content == "!removekey":
             await self.bot_commands.handle_removekey_command(message)
-        elif content in ["!roll", "!user_count", "!server_age", "!coinflip", "!labs", 
+        elif content in ["!roll", "!user_count", "!server_age", "!coinflip", "!labs",
                         "!book", "!commands", "!joke", "!bot_stats"] or content.startswith("!8ball"):
             await self.bot_commands.handle_simple_commands(message)
         else:
             await self.bot_commands.handle_special_messages(message)
+
+    def _setup_scheduled_tasks(self):
+        """Setup scheduled tasks like weekly reports."""
+
+        @tasks.loop(time=time(hour=12, minute=0, tzinfo=pytz.timezone('US/Eastern')))
+        async def send_weekly_report():
+            """Send weekly report every Sunday at noon EST."""
+            # Check if today is Sunday (weekday 6)
+            if datetime.now(pytz.timezone('US/Eastern')).weekday() != 6:
+                return
+
+            print("Generating weekly report...")
+
+            # Get statistics
+            stats = self.weekly_report.get_weekly_stats()
+
+            if stats:
+                # Use AI to get better topic analysis if there are messages
+                if stats['total_messages'] > 0 and stats['all_messages']:
+                    ai_topic = await self.weekly_report.generate_report_with_ai(
+                        self.api_client,
+                        stats['all_messages']
+                    )
+                    if ai_topic:
+                        stats['most_discussed_topic'] = ai_topic
+
+                # Format the report
+                report = self.weekly_report.format_report(stats)
+
+                # Find the "general" channel (case insensitive)
+                general_channel = None
+                for guild in self.client.guilds:
+                    for channel in guild.text_channels:
+                        if channel.name.lower() == "general":
+                            general_channel = channel
+                            break
+                    if general_channel:
+                        break
+
+                if general_channel:
+                    await general_channel.send(report)
+                    print(f"Weekly report sent to {general_channel.name}")
+                else:
+                    print("Could not find 'general' channel to send weekly report")
+            else:
+                print("Failed to generate weekly report statistics")
+
+        @send_weekly_report.before_loop
+        async def before_weekly_report():
+            """Wait until the bot is ready before starting the scheduled task."""
+            await self.client.wait_until_ready()
+
+        # Store the task as an instance variable (will be started in on_ready)
+        self.send_weekly_report = send_weekly_report
     
     def run(self):
         """Start the bot."""
