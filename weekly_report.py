@@ -117,26 +117,80 @@ class WeeklyReport:
         else:
             return f"{top_words[0][0].capitalize()}, {top_words[1][0]}, and {top_words[2][0]}"
 
+    def _extract_word_stats(self, messages):
+        """Extract word and bigram frequencies from ALL messages for AI analysis."""
+        if not messages:
+            return {'words': [], 'bigrams': []}
+
+        # Combine all messages
+        all_text = ' '.join(messages).lower()
+
+        # Remove URLs, mentions, and commands
+        all_text = re.sub(r'http[s]?://\S+', '', all_text)
+        all_text = re.sub(r'<@!?\d+>', '', all_text)
+        all_text = re.sub(r'!\w+', '', all_text)
+
+        # Common stop words to filter out
+        stop_words = {
+            'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
+            'of', 'with', 'by', 'from', 'as', 'is', 'was', 'are', 'were', 'been',
+            'be', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could',
+            'should', 'may', 'might', 'must', 'can', 'this', 'that', 'these', 'those',
+            'i', 'you', 'he', 'she', 'it', 'we', 'they', 'me', 'him', 'her', 'us', 'them',
+            'my', 'your', 'his', 'its', 'our', 'their', 'am', 'im', 'dont', 'doesnt',
+            'not', 'no', 'yes', 'like', 'just', 'get', 'got', 'about', 'so', 'what',
+            'when', 'where', 'who', 'how', 'why', 'if', 'then', 'than', 'some', 'any',
+            'all', 'both', 'each', 'few', 'more', 'most', 'other', 'such', 'only', 'own',
+            'same', 'than', 'too', 'very', 'one', 'two', 'three', 'lol', 'lmao', 'yeah',
+            'ok', 'okay', 'thanks', 'thank', 'thats', 'its', 'youre', 'theyre', 'ive',
+            'haha', 'oh', 'well', 'also', 'now', 'see', 'know', 'think', 'want', 'need'
+        }
+
+        # Extract words (at least 3 characters)
+        words = re.findall(r'\b[a-z]{3,}\b', all_text)
+        meaningful_words = [w for w in words if w not in stop_words]
+
+        # Count single word frequency
+        word_counts = Counter(meaningful_words)
+
+        # Extract bigrams (two-word phrases) from meaningful words
+        bigrams = []
+        for i in range(len(meaningful_words) - 1):
+            bigram = f"{meaningful_words[i]} {meaningful_words[i+1]}"
+            bigrams.append(bigram)
+
+        bigram_counts = Counter(bigrams)
+
+        return {
+            'words': word_counts.most_common(30),
+            'bigrams': bigram_counts.most_common(20)
+        }
+
     async def generate_report_with_ai(self, api_client, messages):
-        """Use AI to analyze messages and extract the most discussed topic."""
+        """Use AI to analyze word frequency stats from ALL messages to identify the most discussed topic."""
         if not messages:
             return "No messages this week"
 
-        # Sample messages if there are too many (to avoid token limits)
-        sample_size = min(100, len(messages))
-        sampled_messages = messages[:sample_size]
+        # Extract word/bigram frequencies from ALL messages
+        stats = self._extract_word_stats(messages)
 
-        messages_text = '\n'.join(sampled_messages[:50])  # Limit to 50 messages for context
+        if not stats['words']:
+            return "General discussion"
 
-        prompt = f"""Analyze these Discord chat messages from the past week and identify the single most discussed topic or theme in 2-5 words. Be specific and concise.
+        # Format stats for AI prompt
+        word_stats = ", ".join([f"{w}({c})" for w, c in stats['words'][:30]])
+        bigram_stats = ", ".join([f'"{b}"({c})' for b, c in stats['bigrams'][:20]]) if stats['bigrams'] else "none"
 
-Messages:
-{messages_text}
+        prompt = f"""Based on this word frequency data from a Discord server's weekly chat:
 
-Most discussed topic (2-5 words):"""
+Top words (count): {word_stats}
+Top phrases (count): {bigram_stats}
+Total messages analyzed: {len(messages)}
+
+Identify the main topic or theme being discussed in 2-5 words. Be specific and concise."""
 
         ai_messages = [
-            {"role": "system", "content": "You are a helpful assistant that analyzes chat conversations and identifies main topics. Respond with only the topic name in 2-5 words."},
+            {"role": "system", "content": "You are a helpful assistant that interprets word frequency statistics from chat conversations to identify main topics. Respond with only the topic name in 2-5 words."},
             {"role": "user", "content": prompt}
         ]
 
