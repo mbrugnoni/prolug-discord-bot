@@ -18,7 +18,7 @@ class WeeklyReport:
 
                 # Get all messages from the last 7 days
                 cursor.execute('''
-                    SELECT user_id, username, message_content
+                    SELECT user_id, username, message_content, channel_name
                     FROM chat_messages
                     WHERE timestamp >= ?
                     ORDER BY timestamp DESC
@@ -32,20 +32,27 @@ class WeeklyReport:
                         'top_chatter': None,
                         'top_chatter_count': 0,
                         'most_discussed_topic': 'No messages this week',
+                        'most_active_channel': None,
+                        'most_active_channel_count': 0,
                         'all_messages': []
                     }
 
-                # Count messages per user
+                # Count messages per user and per channel
                 user_message_counts = Counter()
+                channel_message_counts = Counter()
                 all_message_contents = []
 
                 for msg in messages:
                     user_key = f"{msg['username']}"
                     user_message_counts[user_key] += 1
+                    channel_message_counts[msg['channel_name']] += 1
                     all_message_contents.append(msg['message_content'])
 
                 # Get top chatter
                 top_chatter = user_message_counts.most_common(1)[0] if user_message_counts else (None, 0)
+
+                # Get most active channel
+                top_channel = channel_message_counts.most_common(1)[0] if channel_message_counts else (None, 0)
 
                 # Get most discussed topic
                 most_discussed_topic = self._extract_most_discussed_topic(all_message_contents)
@@ -55,6 +62,8 @@ class WeeklyReport:
                     'top_chatter': top_chatter[0],
                     'top_chatter_count': top_chatter[1],
                     'most_discussed_topic': most_discussed_topic,
+                    'most_active_channel': top_channel[0],
+                    'most_active_channel_count': top_channel[1],
                     'all_messages': all_message_contents
                 }
 
@@ -215,6 +224,9 @@ Identify the main topic or theme being discussed in 2-5 words. Be specific and c
 
         if stats['top_chatter']:
             report += f"🏆 **Top Chatter:** {stats['top_chatter']} ({stats['top_chatter_count']} messages)\n"
+
+        if stats.get('most_active_channel'):
+            report += f"📢 **Most Active Channel:** #{stats['most_active_channel']} ({stats['most_active_channel_count']} messages)\n"
 
         report += f"🔥 **Most Discussed Topic:** {stats['most_discussed_topic']}\n"
 
