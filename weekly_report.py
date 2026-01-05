@@ -49,7 +49,9 @@ class WeeklyReport:
                     user_message_counts[user_id] += 1
                     user_id_to_username[user_id] = msg['username']
                     channel_message_counts[msg['channel_name']] += 1
-                    all_message_contents.append(msg['message_content'])
+                    # Exclude sandbox channel from topic analysis (automated messages skew results)
+                    if msg['channel_name'] != 'sandbox':
+                        all_message_contents.append(msg['message_content'])
 
                 # Get top chatter (by user_id)
                 top_chatter = user_message_counts.most_common(1)[0] if user_message_counts else (None, 0)
