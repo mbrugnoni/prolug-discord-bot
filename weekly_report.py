@@ -2,6 +2,7 @@ import sqlite3
 from datetime import datetime, timedelta
 from collections import Counter
 import re
+from config import EXCLUDED_CHANNELS_FROM_TOPIC
 
 class WeeklyReport:
     def __init__(self, db_path='chat_logs.db'):
@@ -49,8 +50,8 @@ class WeeklyReport:
                     user_message_counts[user_id] += 1
                     user_id_to_username[user_id] = msg['username']
                     channel_message_counts[msg['channel_name']] += 1
-                    # Exclude sandbox channel from topic analysis (automated messages skew results)
-                    if msg['channel_name'] != 'sandbox':
+                    # Exclude certain channels from topic analysis (automated/admin messages skew results)
+                    if msg['channel_name'] not in EXCLUDED_CHANNELS_FROM_TOPIC:
                         all_message_contents.append(msg['message_content'])
 
                 # Get top chatter (by user_id)

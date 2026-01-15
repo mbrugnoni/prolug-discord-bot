@@ -60,3 +60,6 @@ GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 PERPLEXITY_URL = "https://api.perplexity.ai/chat/completions"
 JOKE_API_URL = "https://icanhazdadjoke.com/"
 EIGHTBALL_API_URL = "https://eightballapi.com/api"
+
+# Channel names to exclude from weekly report topic detection
+EXCLUDED_CHANNELS_FROM_TOPIC = {'sandbox', 'moderator-only', 'course-discussion-posts'}
