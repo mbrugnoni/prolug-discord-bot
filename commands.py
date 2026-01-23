@@ -164,7 +164,7 @@ class BotCommands:
             await message.channel.send("Check out Scoot Tanis's new Book of Labs here! -> https://leanpub.com/theprolugbigbookoflabs")
         
         elif content == "!commands":
-            await message.channel.send('I currently support: !ask, !chat, !labs, !book, !8ball, !roll, !coinflip, !server_age, !user_count, !commands, !joke, !task add, !task list, !task remove, !task complete, !bot_stats, !export_thread, !addkey, !removekey, and some other nonsense.')
+            await message.channel.send('I currently support: !ask, !chat, !labs, !book, !8ball, !roll, !coinflip, !server_age, !user_count, !commands, !joke, !task add, !task list, !task remove, !task complete, !bot_stats, !export_thread, !addkey, !removekey, !keystatus, and some other nonsense.')
         
         elif content == "!joke":
             joke = await self.api_client.get_joke()
@@ -301,6 +301,41 @@ class BotCommands:
                 await message.channel.send(f"SSH key removed successfully for {username}!")
             else:
                 await message.channel.send(f"Error removing SSH key. Please try again later.")
+        except subprocess.TimeoutExpired:
+            await message.channel.send("SSH connection timed out. Please try again later.")
+        except (FileNotFoundError, PermissionError):
+            await message.channel.send("SSH command failed. Please contact an administrator.")
+        except Exception:
+            await message.channel.send("An unexpected error occurred. Please try again later.")
+
+    async def handle_keystatus_command(self, message: discord.Message) -> None:
+        """Handle !keystatus command to check if user has an SSH key."""
+        if message.channel.name != "prolug_lab_environment":
+            return
+
+        username = message.author.name
+
+        try:
+            # Use grep -A 1 to get the owner comment line AND the next line (the key)
+            check_result = subprocess.run(
+                ["ssh", "fishermanguybro@prolug.asuscomm.com",
+                 f"sudo grep -iFA 1 '# Owner: {username}' /home/prolug/.ssh/authorized_keys"],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+
+            if check_result.returncode != 0:
+                await message.channel.send(f"{username}, you don't have a key in the authorized_keys file.")
+                return
+
+            # Parse the output - first line is comment, second line is the key
+            lines = check_result.stdout.strip().split('\n')
+            if len(lines) >= 2:
+                ssh_key = lines[1]
+                await message.channel.send(f"{username}, your SSH key is:\n```\n{ssh_key}\n```")
+            else:
+                await message.channel.send(f"{username}, found your key entry but couldn't retrieve the key.")
         except subprocess.TimeoutExpired:
             await message.channel.send("SSH connection timed out. Please try again later.")
         except (FileNotFoundError, PermissionError):

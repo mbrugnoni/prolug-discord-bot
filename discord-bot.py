@@ -202,6 +202,8 @@ class ProLUGBot:
             await self.bot_commands.handle_addkey_command(message)
         elif content == "!removekey":
             await self.bot_commands.handle_removekey_command(message)
+        elif content == "!keystatus":
+            await self.bot_commands.handle_keystatus_command(message)
         elif content in ["!roll", "!user_count", "!server_age", "!coinflip", "!labs",
                         "!book", "!commands", "!joke", "!bot_stats"] or content.startswith("!8ball"):
             await self.bot_commands.handle_simple_commands(message)
