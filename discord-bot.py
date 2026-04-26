@@ -29,6 +29,15 @@ class ProLUGBot:
         intents.message_content = True
         self.client = commands.Bot(command_prefix='!', intents=intents)
 
+        # Override close() to clean up the API session on shutdown
+        original_close = self.client.close
+        api_client = self.api_client
+        async def _close_with_cleanup():
+            logger.info("Bot shutting down, closing API session")
+            await api_client.close()
+            await original_close()
+        self.client.close = _close_with_cleanup
+
         self._setup_scheduled_tasks()
         self._setup_events()
         self._setup_commands()
@@ -43,11 +52,6 @@ class ProLUGBot:
             if not self.send_weekly_report.is_running():
                 self.send_weekly_report.start()
 
-        @self.client.event
-        async def on_close():
-            logger.info("Bot shutting down, closing API session")
-            await self.api_client.close()
-        
         @self.client.event
         async def on_member_join(member):
             channel = self.client.get_channel(WELCOME_CHANNEL_ID)

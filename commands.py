@@ -54,6 +54,7 @@ async def _run_ssh_command(cmd: str, input_data: str = None) -> tuple:
     """Run a command on the remote host via SSH asynchronously.
 
     Returns (returncode, stdout, stderr).
+    Raises asyncio.TimeoutError if the command exceeds SSH_TIMEOUT.
     """
     args = ["ssh", SSH_HOST, cmd]
     proc = await asyncio.create_subprocess_exec(
@@ -62,10 +63,15 @@ async def _run_ssh_command(cmd: str, input_data: str = None) -> tuple:
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )
-    stdout, stderr = await asyncio.wait_for(
-        proc.communicate(input=input_data.encode() if input_data else None),
-        timeout=SSH_TIMEOUT,
-    )
+    try:
+        stdout, stderr = await asyncio.wait_for(
+            proc.communicate(input=input_data.encode() if input_data else None),
+            timeout=SSH_TIMEOUT,
+        )
+    except asyncio.TimeoutError:
+        proc.kill()
+        await proc.wait()
+        raise
     return proc.returncode, stdout.decode(), stderr.decode()
 
 
