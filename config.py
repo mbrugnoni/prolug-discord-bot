@@ -61,3 +61,9 @@ EIGHTBALL_API_URL = "https://eightballapi.com/api"
 
 # Channel names to exclude from weekly report topic detection
 EXCLUDED_CHANNELS_FROM_TOPIC = {'sandbox', 'moderator-only', 'course-discussion-posts'}
+
+# Spam detection
+SPAM_CHANNEL_THRESHOLD = 3       # Distinct channels within the window that triggers detection
+SPAM_TIME_WINDOW_SECONDS = 10    # Sliding window in seconds
+SPAM_TIMEOUT_MINUTES = 10        # Timeout duration applied to spammers
+SPAM_NOTIFY_CHANNEL = "moderator-only"  # Channel to post spam notifications

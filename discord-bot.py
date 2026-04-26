@@ -12,6 +12,7 @@ from commands import BotCommands, is_authorized_user
 from utils import increment_count
 from chat_logger import ChatLogger
 from weekly_report import WeeklyReport
+from spam_detector import SpamDetector
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +23,7 @@ class ProLUGBot:
         self.bot_commands = BotCommands(self.api_client)
         self.chat_logger = ChatLogger()
         self.weekly_report = WeeklyReport()
+        self.spam_detector = SpamDetector(self.client)
 
         # Setup Discord bot
         intents = discord.Intents.default()
@@ -90,7 +92,11 @@ class ProLUGBot:
             # Ignore bot messages
             if message.author == self.client.user:
                 return
-            
+
+            # Check for cross-channel spam before logging or routing
+            if await self.spam_detector.check_message(message):
+                return
+
             username = message.author.name
             channel_name = message.channel.name
             content = message.content
