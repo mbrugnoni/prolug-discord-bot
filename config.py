@@ -49,8 +49,6 @@ class Config:
 
 # Constants
 COUNTS_FILE = "counts.json"
-TASKS_FILE = "user_tasks.txt"
-COMPLETIONS_FILE = "task_completions.json"
 WELCOME_CHANNEL_ID = 611027490848374822
 AUTHORIZED_USERS = ["fishermanguybro", "het_tanis"]
 BOT_USERNAME = "fishermanguybot"

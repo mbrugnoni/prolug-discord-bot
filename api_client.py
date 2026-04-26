@@ -105,3 +105,9 @@ class APIClient:
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
             logger.warning("8-ball API error", exc_info=True)
             return "The magic 8-ball is not responding."
+
+    async def close(self):
+        """Close the aiohttp session."""
+        if self.session:
+            await self.session.close()
+            self.session = None

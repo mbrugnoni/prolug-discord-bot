@@ -2,36 +2,90 @@ import discord
 from discord.ext import commands
 import logging
 import random
-import uuid
+import re
+import base64
 import asyncio
-import subprocess
 import shlex
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from api_client import APIClient
-from utils import (increment_count, get_user_tasks, remove_task, complete_task,
-                   get_bot_stats, parse_command_args)
+from utils import increment_count, get_bot_stats, parse_command_args
 from config import WELCOME_CHANNEL_ID, AUTHORIZED_USERS
 
 logger = logging.getLogger(__name__)
 
+SSH_HOST = "fishermanguybro@prolug.asuscomm.com"
+AUTHORIZED_KEYS_PATH = "/home/prolug/.ssh/authorized_keys"
+SSH_TIMEOUT = 10
+VALID_SSH_KEY_TYPES = frozenset([
+    'ssh-rsa', 'ssh-ed25519', 'ssh-dss',
+    'ecdsa-sha2-nistp256', 'ecdsa-sha2-nistp384', 'ecdsa-sha2-nistp521',
+])
+
+
+def _sanitize_username(username: str) -> Optional[str]:
+    """Sanitize username for safe use in shell commands.
+
+    Returns the username if it only contains safe characters, or None if it
+    contains characters that could be used for shell injection.
+    """
+    if not username or len(username) > 64:
+        return None
+    if not re.match(r'^[a-zA-Z0-9_.\-]+$', username):
+        return None
+    return username
+
+
+def _validate_ssh_key(key: str) -> bool:
+    """Validate that a string looks like a valid SSH public key."""
+    parts = key.strip().split()
+    if len(parts) < 2:
+        return False
+    if parts[0] not in VALID_SSH_KEY_TYPES:
+        return False
+    try:
+        base64.b64decode(parts[1], validate=True)
+    except Exception:
+        return False
+    return True
+
+
+async def _run_ssh_command(cmd: str, input_data: str = None) -> tuple:
+    """Run a command on the remote host via SSH asynchronously.
+
+    Returns (returncode, stdout, stderr).
+    """
+    args = ["ssh", SSH_HOST, cmd]
+    proc = await asyncio.create_subprocess_exec(
+        *args,
+        stdin=asyncio.subprocess.PIPE if input_data else None,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    stdout, stderr = await asyncio.wait_for(
+        proc.communicate(input=input_data.encode() if input_data else None),
+        timeout=SSH_TIMEOUT,
+    )
+    return proc.returncode, stdout.decode(), stderr.decode()
+
+
 class BotCommands:
     def __init__(self, api_client: APIClient):
         self.api_client = api_client
-    
+
     async def handle_ask_command(self, message: discord.Message) -> None:
         """Handle !ask command."""
         question = parse_command_args(message.content, "!ask")
         if not question:
             await message.channel.send("Please provide a question after !ask")
             return
-        
+
         system_prompt = "You are a grumpy old unix administrator. You should answer questions accurately, but give the user a hard time about it. It is very important that you keep your responses concise and under 1500 characters."
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": question}
         ]
-        
+
         response = await self.api_client.make_groq_request(messages)
         if response:
             if len(response) > 2000:
@@ -42,20 +96,20 @@ class BotCommands:
             increment_count("ask")
         else:
             await message.channel.send("Sorry, I encountered an error processing your request.")
-    
+
     async def handle_chat_command(self, message: discord.Message) -> None:
         """Handle !chat command."""
         chat_text = parse_command_args(message.content, "!chat")
         if not chat_text:
             await message.channel.send("Please provide text after !chat")
             return
-        
+
         system_prompt = "You are a grumpy old unix administrator. You are annoyed by constant questions. It is very important that you keep your responses concise and under 1500 characters."
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": chat_text}
         ]
-        
+
         response = await self.api_client.make_groq_request(messages)
         if response:
             if len(response) > 2000:
@@ -65,115 +119,52 @@ class BotCommands:
                 await message.channel.send(response)
         else:
             await message.channel.send("Sorry, I encountered an error processing your request.")
-    
-    async def handle_task_commands(self, message: discord.Message) -> None:
-        """Handle all task-related commands."""
-        content = message.content.lower()
-        username = message.author.name
-        
-        if content.startswith("!task add "):
-            task_description = message.content[10:].strip()
-            if not task_description:
-                await message.channel.send("Please provide a task description.")
-                return
-            
-            unique_id = str(uuid.uuid4())[:8]
-            task_entry = f"{username}|{unique_id}|{task_description}\n"
-            
-            try:
-                with open("user_tasks.txt", "a") as task_file:
-                    task_file.write(task_entry)
-                await message.channel.send(f"Task added successfully. Task ID: {unique_id}")
-            except Exception as e:
-                logger.error("Error adding task for %s", username, exc_info=True)
-                await message.channel.send(f"Error adding task: {str(e)}")
-        
-        elif content == "!task list":
-            user_tasks = get_user_tasks(username)
-            if user_tasks:
-                task_list = "\n".join(user_tasks)
-                await message.channel.send(f"Your tasks:\n{task_list}")
-            else:
-                await message.channel.send("You have no tasks.")
-        
-        elif content.startswith("!task remove "):
-            task_id = parse_command_args(message.content, "!task remove")
-            if not task_id:
-                await message.channel.send("Please provide a task ID to remove.")
-                return
-            
-            if remove_task(username, task_id):
-                await message.channel.send(f"Task with ID {task_id} has been removed.")
-            else:
-                await message.channel.send(f"No task found with ID {task_id} for your user.")
-        
-        elif content.startswith("!task complete "):
-            task_id = parse_command_args(message.content, "!task complete")
-            if not task_id:
-                await message.channel.send("Please provide a task ID to complete.")
-                return
-            
-            completed, total_completed = complete_task(username, task_id)
-            if completed:
-                await message.channel.send(f"Task with ID {task_id} has been completed. You have completed {total_completed} tasks in total!")
-            else:
-                await message.channel.send(f"No task found with ID {task_id} for your user.")
-        
-        elif content == "!task":
-            task_syntax = (
-                "Task command syntax:\n"
-                "- Add a task: !task add <task description>\n"
-                "- List your tasks: !task list\n"
-                "- Remove a task: !task remove <task_id>\n"
-                "- Complete a task: !task complete <task_id>"
-            )
-            await message.channel.send(task_syntax)
-    
+
     async def handle_simple_commands(self, message: discord.Message) -> None:
         """Handle simple commands that don't require complex logic."""
         content = message.content.lower()
         username = message.author.name
-        
+
         if content == "!roll":
             roll = random.randint(1, 12)
             await message.channel.send(f'{username} rolled a {roll}')
-        
+
         elif content.startswith('!8ball'):
             result = await self.api_client.get_eight_ball_response("whatever")
             await message.channel.send(result)
-        
+
         elif content == '!user_count':
             await message.channel.send(f'Total number of users in the server: {message.guild.member_count}')
-        
+
         elif content == '!server_age':
             server = message.guild
             if server:
                 created_at = server.created_at
-                age = datetime.utcnow() - created_at
+                age = datetime.now(timezone.utc) - created_at
                 days = age.days
                 years = days // 365
                 remaining_days = days % 365
                 await message.channel.send(f'This server is {years} years and {remaining_days} days old.')
             else:
                 await message.channel.send('Error: Could not retrieve server information.')
-        
+
         elif content == "!coinflip":
             result = "heads" if random.randint(0, 1) == 0 else "tails"
             await message.channel.send(f'{username} flipped a coin and got {result}')
-        
+
         elif content == "!labs":
             await message.channel.send('Check out the latest labs -> https://killercoda.com/het-tanis\n ---------------------------> https://killercoda.com/fishermanguybro')
-        
+
         elif content == "!book":
             await message.channel.send("Check out Scoot Tanis's new Book of Labs here! -> https://leanpub.com/theprolugbigbookoflabs")
-        
+
         elif content == "!commands":
-            await message.channel.send('I currently support: !ask, !chat, !labs, !book, !8ball, !roll, !coinflip, !server_age, !user_count, !commands, !joke, !task add, !task list, !task remove, !task complete, !bot_stats, !export_thread, !addkey, !removekey, !keystatus, and some other nonsense.')
-        
+            await message.channel.send('I currently support: !ask, !chat, !labs, !book, !8ball, !roll, !coinflip, !server_age, !user_count, !commands, !joke, !bot_stats, !addkey, !removekey, !keystatus, and some other nonsense.')
+
         elif content == "!joke":
             joke = await self.api_client.get_joke()
             await message.channel.send(joke)
-        
+
         elif content == "!bot_stats":
             stats = get_bot_stats()
             if stats:
@@ -188,23 +179,23 @@ class BotCommands:
                 )
             else:
                 await message.channel.send("No stats available yet!")
-    
+
     async def handle_special_messages(self, message: discord.Message) -> None:
         """Handle special message patterns."""
         content = message.content.lower()
         username = message.author.name
-        
+
         if content == "fishermanguybot" or content == "hi":
             await message.channel.send(f'Hello {username}')
-        
+
         elif content == "bye":
             await message.channel.send(f'Get out of here {username}')
-        
+
         elif content == "rise my minion!" and username.lower() == "fishermanguybro":
             await message.channel.send('FishermanGuyBot is coming online... *BEEP* *BOOP* *BEEP*')
             await asyncio.sleep(3)
             await message.channel.send('I am here my master, ready to do your bidding.')
-        
+
         elif "scott" in content and not message.author.bot:
             scoot_responses = [
                 "It's actually pronounced Scoot",
@@ -220,7 +211,7 @@ class BotCommands:
                 "NASA confirmed in 1978 that the correct pronunciation is Scoot."
             ]
             await message.channel.send(random.choice(scoot_responses))
-    
+
     async def handle_addkey_command(self, message: discord.Message) -> None:
         """Handle !addkey command to add SSH keys to the lab environment."""
         if message.channel.name != "prolug_lab_environment":
@@ -232,45 +223,43 @@ class BotCommands:
             return
 
         username = message.author.name
-        comment = f"# Owner: {username}"
+        safe_username = _sanitize_username(username)
+        if not safe_username:
+            logger.warning("Rejected unsafe username for SSH addkey: %s", username)
+            await message.channel.send("Your username contains characters that aren't supported. Please contact an administrator for manual key addition.")
+            return
+
+        if not _validate_ssh_key(ssh_key):
+            await message.channel.send("Invalid SSH key format. Please provide a valid public key (e.g. ssh-ed25519 AAAA...).")
+            return
+
+        comment = f"# Owner: {safe_username}"
 
         try:
-            # Check if user already has a key - use grep -F for literal string matching
-            # Need to pass the remote command as a single string to ssh
-            check_result = subprocess.run(
-                ["ssh", "fishermanguybro@prolug.asuscomm.com",
-                 f"sudo grep -iF '# Owner: {username}' /home/prolug/.ssh/authorized_keys"],
-                capture_output=True,
-                text=True,
-                timeout=10
+            # Check if user already has a key
+            returncode, stdout, stderr = await _run_ssh_command(
+                f"sudo grep -iF {shlex.quote('# Owner: ' + safe_username)} {AUTHORIZED_KEYS_PATH}"
             )
 
-            # grep returns 0 if found, non-zero if not found
-            if check_result.returncode == 0:
+            if returncode == 0:
                 await message.channel.send(f"{username}, you already have an existing key in the authorized_keys file.")
                 return
 
             # Add the new key
-            result = subprocess.run(
-                ["ssh", "fishermanguybro@prolug.asuscomm.com", "sudo", "tee", "-a", "/home/prolug/.ssh/authorized_keys"],
-                input=f"{comment}\n{ssh_key}\n",
-                capture_output=True,
-                text=True,
-                timeout=10
+            returncode, stdout, stderr = await _run_ssh_command(
+                f"sudo tee -a {AUTHORIZED_KEYS_PATH}",
+                input_data=f"{comment}\n{ssh_key}\n",
             )
 
-            if result.returncode == 0:
+            if returncode == 0:
                 await message.channel.send(f"SSH key added successfully for {username}!")
             else:
                 logger.error("SSH addkey failed for %s: returncode=%s stderr=%s",
-                             username, result.returncode, result.stderr)
+                             username, returncode, stderr)
                 await message.channel.send("Error adding SSH key. Please try again later.")
-        except subprocess.TimeoutExpired:
+        except asyncio.TimeoutError:
             logger.error("SSH addkey timed out for %s", username)
             await message.channel.send("SSH connection timed out. Please try again later.")
-        except (FileNotFoundError, PermissionError) as e:
-            logger.error("SSH addkey command not found/permission denied for %s: %s", username, e)
-            await message.channel.send("SSH command failed. Please contact an administrator.")
         except Exception:
             logger.error("Unexpected error in SSH addkey for %s", username, exc_info=True)
             await message.channel.send("An unexpected error occurred. Please try again later.")
@@ -281,43 +270,36 @@ class BotCommands:
             return
 
         username = message.author.name
+        safe_username = _sanitize_username(username)
+        if not safe_username:
+            logger.warning("Rejected unsafe username for SSH removekey: %s", username)
+            await message.channel.send("Your username contains characters that aren't supported. Please contact an administrator for manual key removal.")
+            return
 
         try:
-            # Check if user has a key - pass remote command as single string
-            check_result = subprocess.run(
-                ["ssh", "fishermanguybro@prolug.asuscomm.com",
-                 f"sudo grep -iF '# Owner: {username}' /home/prolug/.ssh/authorized_keys"],
-                capture_output=True,
-                text=True,
-                timeout=10
+            # Check if user has a key
+            returncode, stdout, stderr = await _run_ssh_command(
+                f"sudo grep -iF {shlex.quote('# Owner: ' + safe_username)} {AUTHORIZED_KEYS_PATH}"
             )
 
-            if check_result.returncode != 0:
+            if returncode != 0:
                 await message.channel.send(f"{username}, you don't have a key in the authorized_keys file.")
                 return
 
             # Remove the key using sed with case-insensitive matching
-            # The sed command finds the comment line and deletes it plus the next line
-            result = subprocess.run(
-                ["ssh", "fishermanguybro@prolug.asuscomm.com",
-                 f"sudo sed -i '/# Owner: {username}/I{{N;d;}}' /home/prolug/.ssh/authorized_keys"],
-                capture_output=True,
-                text=True,
-                timeout=10
+            returncode, stdout, stderr = await _run_ssh_command(
+                f"sudo sed -i {shlex.quote('/# Owner: ' + safe_username + '/I{N;d;}')} {AUTHORIZED_KEYS_PATH}"
             )
 
-            if result.returncode == 0:
+            if returncode == 0:
                 await message.channel.send(f"SSH key removed successfully for {username}!")
             else:
                 logger.error("SSH removekey failed for %s: returncode=%s stderr=%s",
-                             username, result.returncode, result.stderr)
-                await message.channel.send(f"Error removing SSH key. Please try again later.")
-        except subprocess.TimeoutExpired:
+                             username, returncode, stderr)
+                await message.channel.send("Error removing SSH key. Please try again later.")
+        except asyncio.TimeoutError:
             logger.error("SSH removekey timed out for %s", username)
             await message.channel.send("SSH connection timed out. Please try again later.")
-        except (FileNotFoundError, PermissionError) as e:
-            logger.error("SSH removekey command not found/permission denied for %s: %s", username, e)
-            await message.channel.send("SSH command failed. Please contact an administrator.")
         except Exception:
             logger.error("Unexpected error in SSH removekey for %s", username, exc_info=True)
             await message.channel.send("An unexpected error occurred. Please try again later.")
@@ -328,37 +310,36 @@ class BotCommands:
             return
 
         username = message.author.name
+        safe_username = _sanitize_username(username)
+        if not safe_username:
+            logger.warning("Rejected unsafe username for SSH keystatus: %s", username)
+            await message.channel.send("Your username contains characters that aren't supported. Please contact an administrator.")
+            return
 
         try:
             # Use grep -A 1 to get the owner comment line AND the next line (the key)
-            check_result = subprocess.run(
-                ["ssh", "fishermanguybro@prolug.asuscomm.com",
-                 f"sudo grep -iFA 1 '# Owner: {username}' /home/prolug/.ssh/authorized_keys"],
-                capture_output=True,
-                text=True,
-                timeout=10
+            returncode, stdout, stderr = await _run_ssh_command(
+                f"sudo grep -iFA 1 {shlex.quote('# Owner: ' + safe_username)} {AUTHORIZED_KEYS_PATH}"
             )
 
-            if check_result.returncode != 0:
+            if returncode != 0:
                 await message.channel.send(f"{username}, you don't have a key in the authorized_keys file.")
                 return
 
             # Parse the output - first line is comment, second line is the key
-            lines = check_result.stdout.strip().split('\n')
+            lines = stdout.strip().split('\n')
             if len(lines) >= 2:
                 ssh_key = lines[1]
                 await message.channel.send(f"{username}, your SSH key is:\n```\n{ssh_key}\n```")
             else:
                 await message.channel.send(f"{username}, found your key entry but couldn't retrieve the key.")
-        except subprocess.TimeoutExpired:
+        except asyncio.TimeoutError:
             logger.error("SSH keystatus timed out for %s", username)
             await message.channel.send("SSH connection timed out. Please try again later.")
-        except (FileNotFoundError, PermissionError) as e:
-            logger.error("SSH keystatus command not found/permission denied for %s: %s", username, e)
-            await message.channel.send("SSH command failed. Please contact an administrator.")
         except Exception:
             logger.error("Unexpected error in SSH keystatus for %s", username, exc_info=True)
             await message.channel.send("An unexpected error occurred. Please try again later.")
+
 
 def is_authorized_user():
     """Decorator to check if user is authorized."""

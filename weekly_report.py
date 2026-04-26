@@ -1,6 +1,6 @@
 import logging
 import sqlite3
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from collections import Counter
 import re
 from config import EXCLUDED_CHANNELS_FROM_TOPIC
@@ -13,7 +13,7 @@ class WeeklyReport:
 
     def get_weekly_stats(self):
         """Get statistics for the last 7 days."""
-        seven_days_ago = (datetime.utcnow() - timedelta(days=7)).isoformat()
+        seven_days_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
 
         try:
             with sqlite3.connect(self.db_path) as conn:

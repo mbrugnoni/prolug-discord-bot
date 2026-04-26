@@ -2,7 +2,6 @@ import discord
 from discord.ext import commands, tasks
 import asyncio
 import logging
-import uuid
 from datetime import datetime, time
 import pytz
 
@@ -43,6 +42,11 @@ class ProLUGBot:
             # Start scheduled tasks after bot is ready
             if not self.send_weekly_report.is_running():
                 self.send_weekly_report.start()
+
+        @self.client.event
+        async def on_close():
+            logger.info("Bot shutting down, closing API session")
+            await self.api_client.close()
         
         @self.client.event
         async def on_member_join(member):
@@ -115,55 +119,12 @@ class ProLUGBot:
         async def on_command_error(ctx, error):
             if isinstance(error, commands.CommandNotFound):
                 return
+            if isinstance(error, commands.CheckFailure):
+                return
             logger.error("Command error: %s", error, exc_info=True)
-            raise error
     
     def _setup_commands(self):
         """Setup Discord slash commands."""
-        
-        @self.client.command()
-        @is_authorized_user()
-        async def export_thread(ctx, thread_id: int):
-            """Export and summarize a thread (authorized users only)."""
-            try:
-                thread = await self.client.fetch_channel(thread_id)
-
-                if not isinstance(thread, discord.Thread):
-                    await ctx.send("The provided ID does not belong to a thread.")
-                    return
-
-                # Fetch messages
-                messages = []
-                async for msg in thread.history(limit=None, oldest_first=True):
-                    messages.append(f"{msg.author.name}: {msg.content}")
-
-                thread_content = "\n".join(messages)
-                prompt = f"Summarize the important information and key terms from the following text:\n\n{thread_content}\n\nSummary:"
-
-                summary_messages = [
-                    {"role": "system", "content": "You are a helpful assistant that summarizes Discord thread conversations. Be precise and concise."},
-                    {"role": "user", "content": prompt}
-                ]
-
-                summary = await self.api_client.make_perplexity_request(summary_messages)
-
-                if summary:
-                    # Split into chunks
-                    chunks = [summary[i:i+1900] for i in range(0, len(summary), 1900)]
-
-                    await ctx.send(f"Thread Summary for thread ID {thread_id}:")
-                    for i, chunk in enumerate(chunks, 1):
-                        await ctx.send(f"Part {i}/{len(chunks)}:\n\n{chunk}")
-                else:
-                    await ctx.send("Failed to generate summary.")
-
-            except discord.NotFound:
-                await ctx.send("Thread not found. Please check the thread ID.")
-            except discord.Forbidden:
-                await ctx.send("I don't have permission to access this thread.")
-            except Exception as e:
-                await ctx.send(f"An unexpected error occurred: {str(e)}")
-                logger.error("Export thread error", exc_info=True)
 
         @self.client.command()
         @is_authorized_user()
@@ -199,8 +160,6 @@ class ProLUGBot:
             await self.bot_commands.handle_ask_command(message)
         elif content.startswith("!chat "):
             await self.bot_commands.handle_chat_command(message)
-        elif content.startswith("!task"):
-            await self.bot_commands.handle_task_commands(message)
         elif content.startswith("!addkey "):
             await self.bot_commands.handle_addkey_command(message)
         elif content == "!removekey":

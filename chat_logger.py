@@ -1,6 +1,6 @@
 import logging
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ class ChatLogger:
                 conn.execute('''
                     INSERT INTO chat_messages (timestamp, user_id, username, channel_id, channel_name, message_content)
                     VALUES (?, ?, ?, ?, ?, ?)
-                ''', (datetime.utcnow().isoformat(), str(user_id), username, str(channel_id), channel_name, message_content))
+                ''', (datetime.now(timezone.utc).isoformat(), str(user_id), username, str(channel_id), channel_name, message_content))
                 conn.commit()
         except sqlite3.Error as e:
             logger.error("Failed to log message for user=%s channel=%s", username, channel_name, exc_info=True)
