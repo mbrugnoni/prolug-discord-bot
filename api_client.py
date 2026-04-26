@@ -1,7 +1,10 @@
 import aiohttp
 import asyncio
+import logging
 from typing import Dict, Any, Optional
 from config import GROQ_URL, PERPLEXITY_URL, JOKE_API_URL, EIGHTBALL_API_URL
+
+logger = logging.getLogger(__name__)
 
 class APIClient:
     def __init__(self, groq_key: str, perplexity_key: str):
@@ -36,7 +39,7 @@ class APIClient:
                     response_json = await response.json()
                     return response_json['choices'][0]['message']['content']
         except (aiohttp.ClientError, KeyError, asyncio.TimeoutError) as e:
-            print(f"Groq API Error: {e}")
+            logger.warning("Groq API error", exc_info=True)
             return None
     
     async def make_perplexity_request(self, messages: list) -> Optional[str]:
@@ -66,7 +69,7 @@ class APIClient:
                     response_json = await response.json()
                     return response_json['choices'][0]['message']['content']
         except (aiohttp.ClientError, KeyError, asyncio.TimeoutError) as e:
-            print(f"Perplexity API Error: {e}")
+            logger.warning("Perplexity API error", exc_info=True)
             return None
     
     async def get_joke(self) -> str:
@@ -83,7 +86,7 @@ class APIClient:
                     else:
                         return f"Error: Failed to fetch joke. Status code: {response.status}"
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
-            print(f"Joke API Error: {e}")
+            logger.warning("Joke API error", exc_info=True)
             return "Sorry, couldn't fetch a joke right now."
     
     async def get_eight_ball_response(self, question: str) -> str:
@@ -100,5 +103,5 @@ class APIClient:
                     else:
                         return "The magic 8-ball is not responding."
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
-            print(f"8-ball API Error: {e}")
+            logger.warning("8-ball API error", exc_info=True)
             return "The magic 8-ball is not responding."

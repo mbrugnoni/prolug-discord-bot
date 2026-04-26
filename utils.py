@@ -1,8 +1,11 @@
 import json
 import asyncio
+import logging
 from datetime import datetime
 from typing import Dict, List, Tuple, Optional
 from config import COUNTS_FILE, TASKS_FILE, COMPLETIONS_FILE
+
+logger = logging.getLogger(__name__)
 
 def increment_count(count_type: str) -> None:
     """Increment and track counts for bot statistics."""
@@ -10,8 +13,9 @@ def increment_count(count_type: str) -> None:
         with open(COUNTS_FILE, "r") as f:
             counts = json.load(f)
     except FileNotFoundError:
+        logger.debug("Counts file not found, starting fresh")
         counts = {}
-    
+
     if count_type not in counts:
         counts[count_type] = {"all_time": 0, "weekly": {}}
     
@@ -30,7 +34,7 @@ def increment_count(count_type: str) -> None:
         with open(COUNTS_FILE, "w") as f:
             json.dump(counts, f)
     except IOError as e:
-        print(f"Error writing counts file: {e}")
+        logger.warning("Error writing counts file: %s", e)
 
 def get_user_tasks(username: str) -> List[str]:
     """Get all tasks for a specific user."""
@@ -46,8 +50,10 @@ def get_user_tasks(username: str) -> List[str]:
                     if task_username.lower() == username.lower():
                         user_tasks.append(f"ID: {task_id} - {task_description}")
                 except ValueError:
+                    logger.warning("Malformed task line in %s: %s", TASKS_FILE, line.strip())
                     continue
     except FileNotFoundError:
+        logger.debug("Tasks file not found for user %s", username)
         return []
     return user_tasks
 
@@ -69,14 +75,16 @@ def remove_task(username: str, task_id: str) -> bool:
                     else:
                         tasks.append(line)
                 except ValueError:
+                    logger.warning("Malformed task line in %s: %s", TASKS_FILE, line.strip())
                     tasks.append(line)
-        
+
         if removed:
             with open(TASKS_FILE, "w") as task_file:
                 task_file.writelines(tasks)
             return True
         return False
     except FileNotFoundError:
+        logger.debug("Tasks file not found for remove_task")
         return False
 
 def complete_task(username: str, task_id: str) -> Tuple[bool, int]:
@@ -97,16 +105,18 @@ def complete_task(username: str, task_id: str) -> Tuple[bool, int]:
                     else:
                         tasks.append(line)
                 except ValueError:
+                    logger.warning("Malformed task line in %s: %s", TASKS_FILE, line.strip())
                     tasks.append(line)
-        
+
         if completed:
             with open(TASKS_FILE, "w") as task_file:
                 task_file.writelines(tasks)
-            
+
             total_completed = update_completion_count(username)
             return True, total_completed
         return False, 0
     except FileNotFoundError:
+        logger.debug("Tasks file not found for complete_task")
         return False, 0
 
 def update_completion_count(username: str) -> int:
@@ -115,8 +125,9 @@ def update_completion_count(username: str) -> int:
         with open(COMPLETIONS_FILE, "r") as f:
             completions = json.load(f)
     except FileNotFoundError:
+        logger.debug("Completions file not found, starting fresh")
         completions = {}
-    
+
     if username not in completions:
         completions[username] = 0
     completions[username] += 1
@@ -125,7 +136,7 @@ def update_completion_count(username: str) -> int:
         with open(COMPLETIONS_FILE, "w") as f:
             json.dump(completions, f)
     except IOError as e:
-        print(f"Error writing completions file: {e}")
+        logger.warning("Error writing completions file: %s", e)
     
     return completions[username]
 
@@ -148,6 +159,7 @@ def get_bot_stats() -> Optional[Dict]:
             "current_week": current_week
         }
     except FileNotFoundError:
+        logger.debug("Counts file not found for get_bot_stats")
         return None
 
 def parse_command_args(message: str, command: str) -> Optional[str]:

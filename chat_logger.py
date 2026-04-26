@@ -1,5 +1,8 @@
+import logging
 import sqlite3
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 class ChatLogger:
     def __init__(self, db_path='chat_logs.db'):
@@ -23,7 +26,7 @@ class ChatLogger:
                 ''')
                 conn.commit()
         except sqlite3.Error as e:
-            print(f"Database initialization error: {e}")
+            logger.error("Database initialization error", exc_info=True)
     
     def log_message(self, user_id, username, channel_id, channel_name, message_content):
         """Log a chat message to the database."""
@@ -35,4 +38,4 @@ class ChatLogger:
                 ''', (datetime.utcnow().isoformat(), str(user_id), username, str(channel_id), channel_name, message_content))
                 conn.commit()
         except sqlite3.Error as e:
-            print(f"Failed to log message: {e}")
+            logger.error("Failed to log message for user=%s channel=%s", username, channel_name, exc_info=True)

@@ -1,8 +1,11 @@
+import logging
 import sqlite3
 from datetime import datetime, timedelta
 from collections import Counter
 import re
 from config import EXCLUDED_CHANNELS_FROM_TOPIC
+
+logger = logging.getLogger(__name__)
 
 class WeeklyReport:
     def __init__(self, db_path='chat_logs.db'):
@@ -77,7 +80,7 @@ class WeeklyReport:
                 }
 
         except sqlite3.Error as e:
-            print(f"Database error in weekly report: {e}")
+            logger.error("Database error in weekly report", exc_info=True)
             return None
 
     def _extract_most_discussed_topic(self, messages):
@@ -219,7 +222,7 @@ Identify the main topic or theme being discussed in 2-5 words. Be specific and c
                 topic = response.strip().strip('"\'')
                 return topic if len(topic) < 100 else "Various topics"
         except Exception as e:
-            print(f"Error generating AI topic analysis: {e}")
+            logger.warning("Error generating AI topic analysis", exc_info=True)
 
         return "Various topics"
 

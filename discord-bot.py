@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands, tasks
 import asyncio
+import logging
 import uuid
 from datetime import datetime, time
 import pytz
@@ -12,6 +13,8 @@ from commands import BotCommands, is_authorized_user
 from utils import increment_count
 from chat_logger import ChatLogger
 from weekly_report import WeeklyReport
+
+logger = logging.getLogger(__name__)
 
 class ProLUGBot:
     def __init__(self):
@@ -36,7 +39,7 @@ class ProLUGBot:
         
         @self.client.event
         async def on_ready():
-            print(f"Logged in as a bot {self.client.user}")
+            logger.info("Logged in as a bot %s", self.client.user)
             # Start scheduled tasks after bot is ready
             if not self.send_weekly_report.is_running():
                 self.send_weekly_report.start()
@@ -45,7 +48,7 @@ class ProLUGBot:
         async def on_member_join(member):
             channel = self.client.get_channel(WELCOME_CHANNEL_ID)
             if not channel:
-                print(f"Warning: Welcome channel {WELCOME_CHANNEL_ID} not found")
+                logger.warning("Welcome channel %s not found", WELCOME_CHANNEL_ID)
                 return
             
             prompt = f"Talk like an angry unix administrator and make your response short. Welcome {member.mention} to the ProLUG discord and encourage them to ask questions about linux. Make sure to state their name in the welcome message. Limit the response to two sentences."
@@ -57,16 +60,16 @@ class ProLUGBot:
             
             response = await self.api_client.make_groq_request(messages)
             
-            print(f"API Response: {response}")
-            print(f"Response length: {len(response) if response else 0}")
+            logger.debug("Welcome API response: %s", response)
+            logger.debug("Welcome API response length: %s", len(response) if response else 0)
             
             if response and len(response) >= 10:
                 await channel.send(response)
-                print(f"Sent welcome message to {member.mention}")
+                logger.info("Sent welcome message to %s", member.name)
             else:
                 default_message = f"Welcome, {member.mention}! Feel free to look around and ask any questions."
                 await channel.send(default_message)
-                print(f"Sent default welcome message to {member.mention} - API response was: {response}")
+                logger.warning("Sent default welcome to %s - API response was: %s", member.name, response)
             
             increment_count("welcome")
             
@@ -93,7 +96,7 @@ class ProLUGBot:
                 message_content=content
             )
             
-            print(f'Message "{content}" by {username} on {channel_name}')
+            logger.debug('Message "%s" by %s on %s', content, username, channel_name)
             
             # Handle polls channel
             if channel_name == "polls" and username.lower() != "fishermanguybot":
@@ -112,7 +115,7 @@ class ProLUGBot:
         async def on_command_error(ctx, error):
             if isinstance(error, commands.CommandNotFound):
                 return
-            print(f"Command error: {error}")
+            logger.error("Command error: %s", error, exc_info=True)
             raise error
     
     def _setup_commands(self):
@@ -160,7 +163,7 @@ class ProLUGBot:
                 await ctx.send("I don't have permission to access this thread.")
             except Exception as e:
                 await ctx.send(f"An unexpected error occurred: {str(e)}")
-                print(f"Export thread error: {e}")
+                logger.error("Export thread error", exc_info=True)
 
         @self.client.command()
         @is_authorized_user()
@@ -220,7 +223,7 @@ class ProLUGBot:
             if datetime.now(pytz.timezone('US/Eastern')).weekday() != 6:
                 return
 
-            print("Generating weekly report...")
+            logger.info("Generating scheduled weekly report")
 
             # Get statistics
             stats = self.weekly_report.get_weekly_stats()
@@ -250,11 +253,11 @@ class ProLUGBot:
 
                 if general_channel:
                     await general_channel.send(report)
-                    print(f"Weekly report sent to {general_channel.name}")
+                    logger.info("Weekly report sent to #%s", general_channel.name)
                 else:
-                    print("Could not find 'general' channel to send weekly report")
+                    logger.error("Could not find 'general' channel to send weekly report")
             else:
-                print("Failed to generate weekly report statistics")
+                logger.error("Failed to generate weekly report statistics")
 
         @send_weekly_report.before_loop
         async def before_weekly_report():
@@ -269,9 +272,11 @@ class ProLUGBot:
         try:
             self.client.run(self.config.discord_key)
         except Exception as e:
-            print(f"Failed to start bot: {e}")
+            logger.critical("Failed to start bot", exc_info=True)
             raise
 
 if __name__ == "__main__":
+    from logger_setup import setup_logging
+    setup_logging()
     bot = ProLUGBot()
     bot.run()

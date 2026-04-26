@@ -1,5 +1,8 @@
+import logging
 import os
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 class Config:
     def __init__(self):
@@ -25,7 +28,7 @@ class Config:
                     raise KeyError(f"Required configuration key '{key}' not found in .env file")
                     
         except (FileNotFoundError, KeyError) as e:
-            print(f"Configuration error: {e}")
+            logger.critical("Configuration error: %s", e)
             raise
     
     @property

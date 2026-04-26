@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+import logging
 import random
 import uuid
 import asyncio
@@ -8,9 +9,11 @@ import shlex
 from datetime import datetime
 from typing import Optional
 from api_client import APIClient
-from utils import (increment_count, get_user_tasks, remove_task, complete_task, 
+from utils import (increment_count, get_user_tasks, remove_task, complete_task,
                    get_bot_stats, parse_command_args)
 from config import WELCOME_CHANNEL_ID, AUTHORIZED_USERS
+
+logger = logging.getLogger(__name__)
 
 class BotCommands:
     def __init__(self, api_client: APIClient):
@@ -82,6 +85,7 @@ class BotCommands:
                     task_file.write(task_entry)
                 await message.channel.send(f"Task added successfully. Task ID: {unique_id}")
             except Exception as e:
+                logger.error("Error adding task for %s", username, exc_info=True)
                 await message.channel.send(f"Error adding task: {str(e)}")
         
         elif content == "!task list":
@@ -258,14 +262,19 @@ class BotCommands:
             if result.returncode == 0:
                 await message.channel.send(f"SSH key added successfully for {username}!")
             else:
+                logger.error("SSH addkey failed for %s: returncode=%s stderr=%s",
+                             username, result.returncode, result.stderr)
                 await message.channel.send("Error adding SSH key. Please try again later.")
         except subprocess.TimeoutExpired:
+            logger.error("SSH addkey timed out for %s", username)
             await message.channel.send("SSH connection timed out. Please try again later.")
-        except (FileNotFoundError, PermissionError):
+        except (FileNotFoundError, PermissionError) as e:
+            logger.error("SSH addkey command not found/permission denied for %s: %s", username, e)
             await message.channel.send("SSH command failed. Please contact an administrator.")
         except Exception:
+            logger.error("Unexpected error in SSH addkey for %s", username, exc_info=True)
             await message.channel.send("An unexpected error occurred. Please try again later.")
-    
+
     async def handle_removekey_command(self, message: discord.Message) -> None:
         """Handle !removekey command to remove SSH keys from the lab environment."""
         if message.channel.name != "prolug_lab_environment":
@@ -300,12 +309,17 @@ class BotCommands:
             if result.returncode == 0:
                 await message.channel.send(f"SSH key removed successfully for {username}!")
             else:
+                logger.error("SSH removekey failed for %s: returncode=%s stderr=%s",
+                             username, result.returncode, result.stderr)
                 await message.channel.send(f"Error removing SSH key. Please try again later.")
         except subprocess.TimeoutExpired:
+            logger.error("SSH removekey timed out for %s", username)
             await message.channel.send("SSH connection timed out. Please try again later.")
-        except (FileNotFoundError, PermissionError):
+        except (FileNotFoundError, PermissionError) as e:
+            logger.error("SSH removekey command not found/permission denied for %s: %s", username, e)
             await message.channel.send("SSH command failed. Please contact an administrator.")
         except Exception:
+            logger.error("Unexpected error in SSH removekey for %s", username, exc_info=True)
             await message.channel.send("An unexpected error occurred. Please try again later.")
 
     async def handle_keystatus_command(self, message: discord.Message) -> None:
@@ -337,10 +351,13 @@ class BotCommands:
             else:
                 await message.channel.send(f"{username}, found your key entry but couldn't retrieve the key.")
         except subprocess.TimeoutExpired:
+            logger.error("SSH keystatus timed out for %s", username)
             await message.channel.send("SSH connection timed out. Please try again later.")
-        except (FileNotFoundError, PermissionError):
+        except (FileNotFoundError, PermissionError) as e:
+            logger.error("SSH keystatus command not found/permission denied for %s: %s", username, e)
             await message.channel.send("SSH command failed. Please contact an administrator.")
         except Exception:
+            logger.error("Unexpected error in SSH keystatus for %s", username, exc_info=True)
             await message.channel.send("An unexpected error occurred. Please try again later.")
 
 def is_authorized_user():
