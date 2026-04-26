@@ -52,9 +52,6 @@ COUNTS_FILE = "counts.json"
 WELCOME_CHANNEL_ID = 611027490848374822
 AUTHORIZED_USERS = ["fishermanguybro", "het_tanis"]
 BOT_USERNAME = "fishermanguybot"
-DISCORD_MESSAGE_CHUNK_SIZE = 1900  # Discord message limit with buffer
-SIMPLE_COMMANDS = ["!roll", "!user_count", "!server_age", "!coinflip", "!labs", 
-                   "!book", "!commands", "!joke", "!bot_stats"]
 
 # API URLs
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
