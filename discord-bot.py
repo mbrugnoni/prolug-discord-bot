@@ -23,7 +23,6 @@ class ProLUGBot:
         self.bot_commands = BotCommands(self.api_client)
         self.chat_logger = ChatLogger()
         self.weekly_report = WeeklyReport()
-        self.spam_detector = SpamDetector(self.client)
 
         # Setup Discord bot
         intents = discord.Intents.default()
@@ -39,6 +38,8 @@ class ProLUGBot:
             await api_client.close()
             await original_close()
         self.client.close = _close_with_cleanup
+
+        self.spam_detector = SpamDetector(self.client)
 
         self._setup_scheduled_tasks()
         self._setup_events()
