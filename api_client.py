@@ -24,7 +24,7 @@ class APIClient:
             "model": model,
             "messages": messages,
             "temperature": 1,
-            "max_completion_tokens": 8192,
+            "max_completion_tokens": 2048,
             "top_p": 1,
             "reasoning_effort": "medium",
             "stream": False,
