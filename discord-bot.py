@@ -9,7 +9,7 @@ import pytz
 from config import Config, WELCOME_CHANNEL_ID
 from api_client import APIClient
 from commands import BotCommands, is_authorized_user
-from utils import increment_count
+from utils import increment_count, claim_milestone
 from chat_logger import ChatLogger
 from weekly_report import WeeklyReport
 from spam_detector import SpamDetector
@@ -84,9 +84,13 @@ class ProLUGBot:
             
             increment_count("welcome")
             
-            # Congratulate milestone members
-            if member.guild.member_count % 500 == 0:
-                await channel.send(f'🎉🎊 @here - Congratulations {member.mention}! 🎉🎊 You are member number {member.guild.member_count}! 🥳🎈')
+            # Congratulate milestone members — only the first time each
+            # threshold is crossed, so repeated joins/leaves around the
+            # boundary don't re-fire the alert.
+            count = member.guild.member_count
+            milestone = (count // 500) * 500
+            if milestone > 0 and claim_milestone(milestone):
+                await channel.send(f'🎉🎊 @here - Congratulations {member.mention}! 🎉🎊 You are member number {count}! 🥳🎈')
         
         @self.client.event
         async def on_message(message):

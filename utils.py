@@ -60,6 +60,34 @@ def get_bot_stats() -> Optional[Dict]:
         logger.debug("Counts file not found for get_bot_stats")
         return None
 
+def claim_milestone(milestone: int) -> bool:
+    """Record a member-count milestone if it hasn't been celebrated yet.
+
+    Returns True if this is a new milestone (caller should announce it),
+    False if it was already recorded. Persisted in COUNTS_FILE so the
+    state survives bot restarts and so a milestone is never re-fired
+    when members leave and rejoin across the threshold.
+    """
+    try:
+        fd = os.open(COUNTS_FILE, os.O_RDWR | os.O_CREAT)
+        with os.fdopen(fd, "r+") as f:
+            fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+            content = f.read()
+            counts = json.loads(content) if content else {}
+
+            last = counts.get("last_milestone", 0)
+            if milestone <= last:
+                return False
+
+            counts["last_milestone"] = milestone
+            f.seek(0)
+            f.truncate()
+            json.dump(counts, f)
+            return True
+    except (IOError, json.JSONDecodeError) as e:
+        logger.warning("Error updating milestone in counts file: %s", e)
+        return False
+
 def parse_command_args(message: str, command: str) -> Optional[str]:
     """Safely parse command arguments from message."""
     # Use case-insensitive comparison for command, but preserve args case
