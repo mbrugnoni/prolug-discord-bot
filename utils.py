@@ -60,6 +60,32 @@ def get_bot_stats() -> Optional[Dict]:
         logger.debug("Counts file not found for get_bot_stats")
         return None
 
+def seed_milestone_floor(floor: int) -> None:
+    """Raise last_milestone to `floor` if it's not already at or above it.
+
+    Called on startup so a fresh or wiped counts.json doesn't cause the
+    next join past an already-passed threshold (e.g. 5003 after the bot
+    is deployed at 5000+ members) to fire a stale milestone alert.
+    """
+    if floor <= 0:
+        return
+    try:
+        fd = os.open(COUNTS_FILE, os.O_RDWR | os.O_CREAT)
+        with os.fdopen(fd, "r+") as f:
+            fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+            content = f.read()
+            counts = json.loads(content) if content else {}
+
+            if counts.get("last_milestone", 0) >= floor:
+                return
+
+            counts["last_milestone"] = floor
+            f.seek(0)
+            f.truncate()
+            json.dump(counts, f)
+    except (IOError, json.JSONDecodeError) as e:
+        logger.warning("Error seeding milestone floor in counts file: %s", e)
+
 def claim_milestone(milestone: int) -> bool:
     """Record a member-count milestone if it hasn't been celebrated yet.
 

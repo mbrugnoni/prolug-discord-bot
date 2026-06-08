@@ -9,7 +9,7 @@ import pytz
 from config import Config, WELCOME_CHANNEL_ID
 from api_client import APIClient
 from commands import BotCommands, is_authorized_user
-from utils import increment_count, claim_milestone
+from utils import increment_count, claim_milestone, seed_milestone_floor
 from chat_logger import ChatLogger
 from weekly_report import WeeklyReport
 from spam_detector import SpamDetector
@@ -51,6 +51,11 @@ class ProLUGBot:
         @self.client.event
         async def on_ready():
             logger.info("Logged in as a bot %s", self.client.user)
+            # Seed the milestone floor from current member counts so a
+            # fresh counts.json doesn't re-fire a milestone we're already past.
+            for guild in self.client.guilds:
+                if guild.member_count:
+                    seed_milestone_floor((guild.member_count // 500) * 500)
             # Start scheduled tasks after bot is ready
             if not self.send_weekly_report.is_running():
                 self.send_weekly_report.start()
