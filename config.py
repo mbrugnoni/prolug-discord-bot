@@ -64,6 +64,6 @@ EXCLUDED_CHANNELS_FROM_TOPIC = {'sandbox', 'moderator-only', 'course-discussion-
 
 # Spam detection
 SPAM_CHANNEL_THRESHOLD = 3       # Distinct channels within the window that triggers detection
-SPAM_TIME_WINDOW_SECONDS = 10    # Sliding window in seconds
+SPAM_TIME_WINDOW_SECONDS = 20    # Sliding window in seconds
 SPAM_TIMEOUT_MINUTES = 10        # Timeout duration applied to spammers
 SPAM_NOTIFY_CHANNEL = "moderator-only"  # Channel to post spam notifications
