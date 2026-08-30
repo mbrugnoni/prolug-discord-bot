@@ -8,8 +8,56 @@ from config import EXCLUDED_CHANNELS_FROM_TOPIC
 logger = logging.getLogger(__name__)
 
 class WeeklyReport:
+    # Common stop words to filter out of topic analysis
+    STOP_WORDS = {
+        'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
+        'of', 'with', 'by', 'from', 'as', 'is', 'was', 'are', 'were', 'been',
+        'be', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could',
+        'should', 'may', 'might', 'must', 'can', 'this', 'that', 'these', 'those',
+        'i', 'you', 'he', 'she', 'it', 'we', 'they', 'me', 'him', 'her', 'us', 'them',
+        'my', 'your', 'his', 'its', 'our', 'their', 'am', 'im', 'dont', 'doesnt',
+        'not', 'no', 'yes', 'like', 'just', 'get', 'got', 'about', 'so', 'what',
+        'when', 'where', 'who', 'how', 'why', 'if', 'then', 'than', 'some', 'any',
+        'all', 'both', 'each', 'few', 'more', 'most', 'other', 'such', 'only', 'own',
+        'same', 'than', 'too', 'very', 'one', 'two', 'three', 'lol', 'lmao', 'yeah',
+        'ok', 'okay', 'thanks', 'thank', 'thats', 'its', 'youre', 'theyre', 'ive',
+        'haha', 'oh', 'well', 'also', 'now', 'see', 'know', 'think', 'want', 'need'
+    }
+
     def __init__(self, db_path='chat_logs.db'):
         self.db_path = db_path
+
+    def _extract_meaningful_words(self, text):
+        """Clean a single message and return its meaningful words."""
+        text = text.lower()
+        text = re.sub(r'http[s]?://\S+', '', text)  # Remove URLs
+        text = re.sub(r'<a?:\w+:\d+>', '', text)  # Remove custom emojis
+        text = re.sub(r'<@!?\d+>', '', text)  # Remove user mentions
+        text = re.sub(r'<@&\d+>', '', text)  # Remove role mentions
+        text = re.sub(r'<#\d+>', '', text)  # Remove channel mentions
+        text = re.sub(r'!\w+', '', text)  # Remove commands
+
+        # Extract words (at least 3 characters), drop stop words
+        words = re.findall(r'\b[a-z]{3,}\b', text)
+        return [w for w in words if w not in self.STOP_WORDS]
+
+    def _count_by_distinct_users(self, messages):
+        """Count words and bigrams by the number of DISTINCT users who used them,
+        so no single user (e.g. a spammer) can dominate topic detection.
+        Bigrams are built within each message, never across message boundaries."""
+        word_users = set()    # (user_id, word) pairs
+        bigram_users = set()  # (user_id, bigram) pairs
+
+        for user_id, content in messages:
+            words = self._extract_meaningful_words(content)
+            for w in words:
+                word_users.add((user_id, w))
+            for i in range(len(words) - 1):
+                bigram_users.add((user_id, f"{words[i]} {words[i+1]}"))
+
+        word_counts = Counter(w for _, w in word_users)
+        bigram_counts = Counter(b for _, b in bigram_users)
+        return word_counts, bigram_counts
 
     def get_weekly_stats(self):
         """Get statistics for the last 7 days."""
@@ -55,7 +103,7 @@ class WeeklyReport:
                     channel_message_counts[msg['channel_name']] += 1
                     # Exclude certain channels from topic analysis (automated/admin messages skew results)
                     if msg['channel_name'] not in EXCLUDED_CHANNELS_FROM_TOPIC:
-                        all_message_contents.append(msg['message_content'])
+                        all_message_contents.append((user_id, msg['message_content']))
 
                 # Get top chatter (by user_id)
                 top_chatter = user_message_counts.most_common(1)[0] if user_message_counts else (None, 0)
@@ -84,47 +132,14 @@ class WeeklyReport:
             return None
 
     def _extract_most_discussed_topic(self, messages):
-        """Extract the most discussed topic from messages using keyword analysis."""
+        """Extract the most discussed topic from (user_id, content) tuples,
+        ranking words by how many distinct users mentioned them."""
         if not messages:
             return "No messages"
 
-        # Combine all messages
-        all_text = ' '.join(messages).lower()
+        word_counts, _ = self._count_by_distinct_users(messages)
 
-        # Remove common words, URLs, mentions, and commands
-        all_text = re.sub(r'http[s]?://\S+', '', all_text)  # Remove URLs
-        all_text = re.sub(r'<@!?\d+>', '', all_text)  # Remove mentions
-        all_text = re.sub(r'!\w+', '', all_text)  # Remove commands
-
-        # Common stop words to filter out
-        stop_words = {
-            'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
-            'of', 'with', 'by', 'from', 'as', 'is', 'was', 'are', 'were', 'been',
-            'be', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could',
-            'should', 'may', 'might', 'must', 'can', 'this', 'that', 'these', 'those',
-            'i', 'you', 'he', 'she', 'it', 'we', 'they', 'me', 'him', 'her', 'us', 'them',
-            'my', 'your', 'his', 'its', 'our', 'their', 'am', 'im', 'dont', 'doesnt',
-            'not', 'no', 'yes', 'like', 'just', 'get', 'got', 'about', 'so', 'what',
-            'when', 'where', 'who', 'how', 'why', 'if', 'then', 'than', 'some', 'any',
-            'all', 'both', 'each', 'few', 'more', 'most', 'other', 'such', 'only', 'own',
-            'same', 'than', 'too', 'very', 'one', 'two', 'three', 'lol', 'lmao', 'yeah',
-            'ok', 'okay', 'thanks', 'thank', 'thats', 'its', 'youre', 'theyre', 'ive',
-            'haha', 'oh', 'well', 'also', 'now', 'see', 'know', 'think', 'want', 'need'
-        }
-
-        # Extract words (at least 3 characters)
-        words = re.findall(r'\b[a-z]{3,}\b', all_text)
-
-        # Filter out stop words
-        meaningful_words = [w for w in words if w not in stop_words]
-
-        if not meaningful_words:
-            return "General discussion"
-
-        # Count word frequency
-        word_counts = Counter(meaningful_words)
-
-        # Get top 3 most common words
+        # Get top 3 words used by the most distinct users
         top_words = word_counts.most_common(3)
 
         if not top_words:
@@ -139,48 +154,12 @@ class WeeklyReport:
             return f"{top_words[0][0].capitalize()}, {top_words[1][0]}, and {top_words[2][0]}"
 
     def _extract_word_stats(self, messages):
-        """Extract word and bigram frequencies from ALL messages for AI analysis."""
+        """Extract word and bigram stats from (user_id, content) tuples for AI analysis,
+        counting each by the number of distinct users who used it."""
         if not messages:
             return {'words': [], 'bigrams': []}
 
-        # Combine all messages
-        all_text = ' '.join(messages).lower()
-
-        # Remove URLs, mentions, and commands
-        all_text = re.sub(r'http[s]?://\S+', '', all_text)
-        all_text = re.sub(r'<@!?\d+>', '', all_text)
-        all_text = re.sub(r'!\w+', '', all_text)
-
-        # Common stop words to filter out
-        stop_words = {
-            'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
-            'of', 'with', 'by', 'from', 'as', 'is', 'was', 'are', 'were', 'been',
-            'be', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could',
-            'should', 'may', 'might', 'must', 'can', 'this', 'that', 'these', 'those',
-            'i', 'you', 'he', 'she', 'it', 'we', 'they', 'me', 'him', 'her', 'us', 'them',
-            'my', 'your', 'his', 'its', 'our', 'their', 'am', 'im', 'dont', 'doesnt',
-            'not', 'no', 'yes', 'like', 'just', 'get', 'got', 'about', 'so', 'what',
-            'when', 'where', 'who', 'how', 'why', 'if', 'then', 'than', 'some', 'any',
-            'all', 'both', 'each', 'few', 'more', 'most', 'other', 'such', 'only', 'own',
-            'same', 'than', 'too', 'very', 'one', 'two', 'three', 'lol', 'lmao', 'yeah',
-            'ok', 'okay', 'thanks', 'thank', 'thats', 'its', 'youre', 'theyre', 'ive',
-            'haha', 'oh', 'well', 'also', 'now', 'see', 'know', 'think', 'want', 'need'
-        }
-
-        # Extract words (at least 3 characters)
-        words = re.findall(r'\b[a-z]{3,}\b', all_text)
-        meaningful_words = [w for w in words if w not in stop_words]
-
-        # Count single word frequency
-        word_counts = Counter(meaningful_words)
-
-        # Extract bigrams (two-word phrases) from meaningful words
-        bigrams = []
-        for i in range(len(meaningful_words) - 1):
-            bigram = f"{meaningful_words[i]} {meaningful_words[i+1]}"
-            bigrams.append(bigram)
-
-        bigram_counts = Counter(bigrams)
+        word_counts, bigram_counts = self._count_by_distinct_users(messages)
 
         return {
             'words': word_counts.most_common(30),
@@ -202,16 +181,16 @@ class WeeklyReport:
         word_stats = ", ".join([f"{w}({c})" for w, c in stats['words'][:30]])
         bigram_stats = ", ".join([f'"{b}"({c})' for b, c in stats['bigrams'][:20]]) if stats['bigrams'] else "none"
 
-        prompt = f"""Based on this word frequency data from a Discord server's weekly chat:
+        prompt = f"""Based on this data from a Discord server's weekly chat, where each count is the number of DISTINCT USERS who used that word or phrase:
 
-Top words (count): {word_stats}
-Top phrases (count): {bigram_stats}
+Top words (users): {word_stats}
+Top phrases (users): {bigram_stats}
 Total messages analyzed: {len(messages)}
 
 Identify the main topic or theme being discussed in 2-5 words. Be specific and concise."""
 
         ai_messages = [
-            {"role": "system", "content": "You are a helpful assistant that interprets word frequency statistics from chat conversations to identify main topics. Respond with only the topic name in 2-5 words."},
+            {"role": "system", "content": "You are a helpful assistant that interprets word usage statistics from chat conversations to identify main topics. Respond with only the topic name in 2-5 words."},
             {"role": "user", "content": prompt}
         ]
 

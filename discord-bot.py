@@ -99,8 +99,8 @@ class ProLUGBot:
         
         @self.client.event
         async def on_message(message):
-            # Ignore bot messages
-            if message.author == self.client.user:
+            # Ignore all bot/webhook messages so they don't skew logs or stats
+            if message.author.bot:
                 return
 
             # Check for cross-channel spam before logging or routing
